@@ -80,7 +80,7 @@
 
 <div class="inputBox">
   <input id="msg" placeholder="Type message..." />
-  <button onclick="send()">Send</button>
+  <button id="sendBtn">Send</button>
 </div>
 
 <script type="module">
@@ -125,8 +125,8 @@ document.getElementById("userName").innerText = "You: " + username;
 // FIRESTORE PATH
 const chatRef = collection(db, "rooms", room, "messages");
 
-// SEND MESSAGE
-window.send = async function () {
+// SEND FUNCTION
+async function send() {
   const input = document.getElementById("msg");
   const text = input.value.trim();
 
@@ -139,9 +139,12 @@ window.send = async function () {
   });
 
   input.value = "";
-};
+}
 
-// LISTEN FOR MESSAGES
+// CONNECT BUTTON
+document.getElementById("sendBtn").addEventListener("click", send);
+
+// LIVE MESSAGES
 const q = query(chatRef, orderBy("time"));
 
 onSnapshot(q, (snapshot) => {
