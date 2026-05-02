@@ -1,688 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Temp Chat</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Temp Chat</title>
 
-  <style>
-    :root {
-      --bg: #0b1020;
-      --bg2: #111827;
-      --text: #f8fafc;
-      --muted: rgba(248, 250, 252, 0.7);
-      --panel: rgba(15, 23, 42, 0.72);
-      --panel-border: rgba(255, 255, 255, 0.08);
-      --input: rgba(255, 255, 255, 0.08);
-      --input-border: rgba(255, 255, 255, 0.1);
-      --bubble-other: rgba(255, 255, 255, 0.08);
-      --bubble-me: linear-gradient(135deg, #5865f2, #8b5cf6);
-      --bubble-me-text: #ffffff;
-      --accent: #7c3aed;
-      --button: rgba(255, 255, 255, 0.08);
-      --button-text: #f8fafc;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-    }
+<style>
+:root{
+  --bg:#0b1020;
+  --text:#fff;
+  --box:#1e293b;
+  --me:#6366f1;
+}
+body.light{
+  --bg:#f3f6fb;
+  --text:#111;
+  --box:#ffffff;
+}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
 
-    body[data-theme="light"] {
-      --bg: #f3f6fb;
-      --bg2: #e9eef8;
-      --text: #0f172a;
-      --muted: rgba(15, 23, 42, 0.62);
-      --panel: rgba(255, 255, 255, 0.82);
-      --panel-border: rgba(15, 23, 42, 0.08);
-      --input: rgba(255, 255, 255, 1);
-      --input-border: rgba(15, 23, 42, 0.08);
-      --bubble-other: #ffffff;
-      --bubble-me: linear-gradient(135deg, #4f46e5, #7c3aed);
-      --bubble-me-text: #ffffff;
-      --accent: #6d28d9;
-      --button: rgba(15, 23, 42, 0.06);
-      --button-text: #0f172a;
-      --shadow: 0 18px 50px rgba(15, 23, 42, 0.1);
-    }
+/* header */
+.header{
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  background:var(--box);
+  align-items:center;
+}
+#info{font-size:12px;opacity:.7}
 
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, var(--bg2), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.22), transparent 30%),
-        var(--bg);
-      overflow: hidden;
-    }
+/* chat */
+#chat{
+  flex:1;
+  overflow:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.msg{max-width:75%}
+.me{align-self:flex-end;text-align:right}
+.other{align-self:flex-start}
 
-    canvas#bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
+.name{
+  font-size:11px;
+  font-weight:bold;
+}
+.bubble{
+  padding:10px;
+  border-radius:12px;
+  background:var(--box);
+}
+.me .bubble{
+  background:var(--me);
+  color:#fff;
+}
 
-    .app {
-      position: relative;
-      z-index: 1;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      padding: 10px;
-      gap: 10px;
-    }
+/* input */
+.inputBox{
+  display:flex;
+  padding:8px;
+  gap:6px;
+  background:var(--box);
+}
+input{
+  flex:1;
+  padding:10px;
+  border-radius:20px;
+  border:none;
+}
+button{padding:10px;border:none;border-radius:20px}
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 12px;
-      border: 1px solid var(--panel-border);
-      border-radius: 18px;
-      background: var(--panel);
-      backdrop-filter: blur(16px);
-      box-shadow: var(--shadow);
-      flex: 0 0 auto;
-    }
-
-    .roomblock {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .roomtitle {
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .roommeta {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    select, button {
-      font: inherit;
-    }
-
-    .select, .iconbtn {
-      height: 40px;
-      border-radius: 999px;
-      border: 1px solid var(--panel-border);
-      background: var(--button);
-      color: var(--button-text);
-      padding: 0 12px;
-      outline: none;
-    }
-
-    .iconbtn {
-      width: 40px;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-    }
-
-    .messages {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-      padding: 2px 2px 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      scroll-behavior: smooth;
-    }
-
-    .msg {
-      max-width: min(78%, 520px);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .msg.me {
-      align-self: flex-end;
-      align-items: flex-end;
-    }
-
-    .msg.other {
-      align-self: flex-start;
-      align-items: flex-start;
-    }
-
-    .name {
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.01em;
-      line-height: 1.1;
-      user-select: none;
-    }
-
-    .bubble {
-      max-width: 100%;
-      padding: 10px 13px;
-      border-radius: 18px;
-      line-height: 1.45;
-      font-size: 15px;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    body[data-theme="light"] .bubble {
-      border: 1px solid rgba(15, 23, 42, 0.05);
-    }
-
-    .msg.other .bubble {
-      background: var(--bubble-other);
-      color: var(--text);
-      border-bottom-left-radius: 6px;
-    }
-
-    .msg.me .bubble {
-      background: var(--bubble-me);
-      color: var(--bubble-me-text);
-      border-bottom-right-radius: 6px;
-    }
-
-    .composer {
-      flex: 0 0 auto;
-      display: flex;
-      gap: 8px;
-      padding: 10px;
-      border-radius: 18px;
-      border: 1px solid var(--panel-border);
-      background: var(--panel);
-      backdrop-filter: blur(16px);
-      box-shadow: var(--shadow);
-      align-items: center;
-    }
-
-    .composer input {
-      flex: 1 1 auto;
-      min-width: 0;
-      height: 48px;
-      border-radius: 999px;
-      border: 1px solid var(--input-border);
-      background: var(--input);
-      color: var(--text);
-      padding: 0 16px;
-      outline: none;
-      font-size: 15px;
-    }
-
-    .composer input::placeholder {
-      color: var(--muted);
-    }
-
-    .sendbtn {
-      height: 48px;
-      padding: 0 18px;
-      border: none;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #5865f2, #7c3aed);
-      color: white;
-      font-weight: 700;
-      cursor: pointer;
-      flex: 0 0 auto;
-    }
-
-    .expired {
-      margin: auto;
-      text-align: center;
-      color: var(--muted);
-      font-size: 15px;
-      padding: 22px 14px;
-    }
-
-    .small {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    @media (max-width: 560px) {
-      .app {
-        padding: 8px;
-        gap: 8px;
-      }
-
-      .topbar {
-        padding: 10px;
-        border-radius: 16px;
-      }
-
-      .composer {
-        padding: 8px;
-        border-radius: 16px;
-      }
-
-      .msg {
-        max-width: 86%;
-      }
-
-      .bubble {
-        font-size: 14px;
-        padding: 9px 12px;
-      }
-
-      .select {
-        width: 118px;
-        padding: 0 10px;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        scroll-behavior: auto !important;
-        transition: none !important;
-        animation: none !important;
-      }
-    }
-  </style>
+/* canvas */
+canvas{
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:0;
+}
+</style>
 </head>
 
-<body data-theme="dark">
-  <canvas id="bg"></canvas>
+<body>
 
-  <div class="app">
-    <div class="topbar">
-      <div class="roomblock">
-        <div class="roomtitle" id="roomTitle">Room</div>
-        <div class="roommeta" id="roomMeta">Loading...</div>
-      </div>
+<canvas id="bg"></canvas>
 
-      <div class="controls">
-        <select class="select" id="effectSelect" aria-label="Background effect">
-          <option value="none">None</option>
-          <option value="snow">Snow</option>
-          <option value="rain">Rain</option>
-          <option value="thunder">Thunder</option>
-        </select>
-        <button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
-      </div>
-    </div>
-
-    <div class="messages" id="chat"></div>
-
-    <div class="composer">
-      <input id="msg" type="text" placeholder="Type a message..." autocomplete="off" />
-      <button class="sendbtn" id="sendBtn" type="button">Send</button>
-    </div>
+<div class="header">
+  <div id="info"></div>
+  <div>
+    <select id="effect">
+      <option value="none">None</option>
+      <option value="snow">Snow</option>
+      <option value="rain">Rain</option>
+      <option value="thunder">Thunder</option>
+    </select>
+    <button id="theme">🌙</button>
   </div>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      query,
-      orderBy,
-      onSnapshot,
-      doc,
-      getDoc,
-      setDoc
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<div id="chat"></div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
-      authDomain: "temp-chat-6f08b.firebaseapp.com",
-      projectId: "temp-chat-6f08b",
-      storageBucket: "temp-chat-6f08b.firebasestorage.app",
-      messagingSenderId: "388611361050",
-      appId: "1:388611361050:web:1db50e9927a3bc794e84a3",
-      measurementId: "G-WH9L6RNPSV"
-    };
+<div class="inputBox">
+  <input id="msg" placeholder="Message...">
+  <button id="send">Send</button>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+getFirestore,collection,addDoc,query,orderBy,onSnapshot,
+doc,getDoc,setDoc,updateDoc,deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const params = new URLSearchParams(location.search);
-    const username = params.get("user") || localStorage.getItem("username") || "";
-    const room = params.get("room") || localStorage.getItem("room") || "";
-    const durationParam = params.get("duration") || localStorage.getItem("duration") || "10m";
+const firebaseConfig={
+  apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
+  authDomain:"temp-chat-6f08b.firebaseapp.com",
+  projectId:"temp-chat-6f08b"
+};
 
-    const durationMap = {
-      "1m": 60_000,
-      "5m": 300_000,
-      "10m": 600_000,
-      "1d": 86_400_000,
-      "7d": 604_800_000
-    };
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-    const duration = durationMap[durationParam] ?? 600_000;
+/* params */
+const p=new URLSearchParams(location.search);
+const user=p.get("user");
+const room=p.get("room");
 
-    if (!username || !room) {
-      location.href = "index.html";
+/* UI */
+const chat=document.getElementById("chat");
+const msg=document.getElementById("msg");
+const info=document.getElementById("info");
+
+/* gradient */
+function grad(name){
+  const g=[
+["#ff7eb3","#ff758c"],
+["#7afcff","#00c6ff"],
+["#fbc2eb","#a6c1ee"],
+["#fddb92","#d1fdff"],
+["#84fab0","#8fd3f4"]
+];
+return g[name.length%g.length];
+}
+
+/* room */
+const roomRef=doc(db,"rooms",room);
+await setDoc(roomRef,{createdAt:Date.now()},{merge:true});
+
+/* presence */
+const presRef=doc(db,"rooms",room,"presence",user);
+await setDoc(presRef,{online:true});
+
+window.onbeforeunload=()=>deleteDoc(presRef);
+
+/* online users */
+onSnapshot(collection(db,"rooms",room,"presence"),snap=>{
+  let users=[];
+  snap.forEach(d=>users.push(d.id));
+  info.innerText=`${room} • ${users.length} online`;
+});
+
+/* messages */
+const ref=collection(db,"rooms",room,"messages");
+
+async function send(){
+  const t=msg.value.trim();
+  if(!t)return;
+  await addDoc(ref,{
+    user,text:t,time:Date.now(),seenBy:[user]
+  });
+  msg.value="";
+}
+
+send.onclick=send;
+msg.onkeypress=e=>{if(e.key==="Enter")send()};
+
+/* listen */
+onSnapshot(query(ref,orderBy("time")),snap=>{
+  chat.innerHTML="";
+  snap.forEach(docSnap=>{
+    const m=docSnap.data();
+
+    const div=document.createElement("div");
+    div.className="msg "+(m.user===user?"me":"other");
+
+    const [c1,c2]=grad(m.user);
+
+    div.innerHTML=`
+      <div class="name" style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        ${m.user}
+      </div>
+      <div class="bubble">
+        ${m.text}
+        <div style="font-size:10px;opacity:.6;">
+          ${new Date(m.time).toLocaleTimeString()}
+        </div>
+      </div>
+    `;
+
+    if(m.user===user){
+      const status=document.createElement("div");
+      status.style.fontSize="10px";
+      status.innerText=(m.seenBy?.length>1)?"Seen":"Delivered";
+      div.appendChild(status);
     }
 
-    const chatEl = document.getElementById("chat");
-    const msgEl = document.getElementById("msg");
-    const sendBtn = document.getElementById("sendBtn");
-    const themeToggle = document.getElementById("themeToggle");
-    const effectSelect = document.getElementById("effectSelect");
-    const roomTitle = document.getElementById("roomTitle");
-    const roomMeta = document.getElementById("roomMeta");
-    const canvas = document.getElementById("bg");
-    const ctx = canvas.getContext("2d");
+    chat.appendChild(div);
 
-    roomTitle.textContent = `#${room}`;
-    roomMeta.textContent = `${username} · ${durationParam}`;
-
-    const roomRef = doc(db, "rooms", room);
-    const messagesRef = collection(db, "rooms", room, "messages");
-
-    async function ensureRoom() {
-      const snap = await getDoc(roomRef);
-      const now = Date.now();
-
-      if (!snap.exists()) {
-        await setDoc(roomRef, {
-          createdAt: now,
-          expireAt: now + duration,
-          durationKey: durationParam
-        });
-        return { createdAt: now, expireAt: now + duration };
-      }
-
-      const data = snap.data();
-      if (!data.expireAt) {
-        await setDoc(roomRef, {
-          expireAt: now + duration,
-          durationKey: durationParam
-        }, { merge: true });
-        return { ...data, expireAt: now + duration };
-      }
-
-      return data;
-    }
-
-    let roomData = await ensureRoom();
-
-    function formatLeft(ms) {
-      const s = Math.max(0, Math.floor(ms / 1000));
-      const m = Math.floor(s / 60);
-      const r = s % 60;
-      const h = Math.floor(m / 60);
-      const mm = m % 60;
-
-      if (h > 0) return `${h}h ${mm}m left`;
-      if (m > 0) return `${m}m ${r}s left`;
-      return `${r}s left`;
-    }
-
-    function updateRoomMeta() {
-      const left = roomData?.expireAt ? roomData.expireAt - Date.now() : 0;
-      if (left <= 0) {
-        roomMeta.textContent = `expired`;
-      } else {
-        roomMeta.textContent = `${username} · ${formatLeft(left)}`;
-      }
-    }
-
-    const metaTimer = setInterval(updateRoomMeta, 1000);
-    updateRoomMeta();
-
-    function isExpired() {
-      return roomData?.expireAt ? Date.now() > roomData.expireAt : false;
-    }
-
-    function setExpiredUI() {
-      chatEl.innerHTML = `<div class="expired">⛔ This room has expired.</div>`;
-      msgEl.disabled = true;
-      sendBtn.disabled = true;
-      msgEl.placeholder = "Room expired";
-    }
-
-    if (isExpired()) {
-      setExpiredUI();
-    }
-
-    function sanitizeText(text) {
-      return String(text);
-    }
-
-    function hashString(str) {
-      let h = 0;
-      for (let i = 0; i < str.length; i++) {
-        h = (h << 5) - h + str.charCodeAt(i);
-        h |= 0;
-      }
-      return Math.abs(h);
-    }
-
-    const gradientSets = [
-      ["#ff7eb3", "#ff758c"],
-      ["#7afcff", "#00c6ff"],
-      ["#fbc2eb", "#a6c1ee"],
-      ["#fddb92", "#d1fdff"],
-      ["#84fab0", "#8fd3f4"],
-      ["#cfd9df", "#e2ebf0"],
-      ["#f6d365", "#fda085"],
-      ["#a1c4fd", "#c2e9fb"],
-      ["#d4fc79", "#96e6a1"],
-      ["#fccb90", "#d57eeb"]
-    ];
-
-    function gradientForName(name) {
-      const idx = hashString(name) % gradientSets.length;
-      return gradientSets[idx];
-    }
-
-    function usernameStyle(name) {
-      const [a, b] = gradientForName(name);
-      return `background: linear-gradient(90deg, ${a}, ${b}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;`;
-    }
-
-    async function sendMessage() {
-      if (isExpired()) {
-        setExpiredUI();
-        return;
-      }
-
-      const text = msgEl.value.trim();
-      if (!text) return;
-
-      await addDoc(messagesRef, {
-        user: username,
-        text,
-        time: Date.now()
+    /* mark seen */
+    if(!m.seenBy?.includes(user)){
+      updateDoc(doc(db,"rooms",room,"messages",docSnap.id),{
+        seenBy:[...(m.seenBy||[]),user]
       });
-
-      msgEl.value = "";
-      msgEl.focus();
     }
+  });
 
-    sendBtn.addEventListener("click", sendMessage);
-    msgEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
+  chat.scrollTop=chat.scrollHeight;
+});
 
-    onSnapshot(query(messagesRef, orderBy("time")), async (snap) => {
-      if (isExpired()) {
-        setExpiredUI();
-        return;
-      }
+/* theme */
+document.getElementById("theme").onclick=()=>{
+  document.body.classList.toggle("light");
+};
 
-      chatEl.innerHTML = "";
+/* effects */
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-      snap.forEach((docSnap) => {
-        const m = docSnap.data();
+let mode="none";
+effect.onchange=e=>mode=e.target.value;
 
-        const row = document.createElement("div");
-        row.className = `msg ${m.user === username ? "me" : "other"}`;
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        const name = document.createElement("div");
-        name.className = "name";
-        name.setAttribute("style", usernameStyle(m.user));
-        name.textContent = m.user;
-
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-        bubble.textContent = sanitizeText(m.text);
-
-        row.appendChild(name);
-        row.appendChild(bubble);
-        chatEl.appendChild(row);
-      });
-
-      chatEl.scrollTop = chatEl.scrollHeight;
-    });
-
-    function getTheme() {
-      const saved = localStorage.getItem("theme");
-      if (saved === "light" || saved === "dark") return saved;
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  if(mode==="snow"){
+    for(let i=0;i<40;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
     }
+  }
 
-    function applyTheme(theme) {
-      document.body.setAttribute("data-theme", theme);
-      localStorage.setItem("theme", theme);
-      themeToggle.textContent = theme === "dark" ? "☾" : "☀";
-      document.documentElement.style.colorScheme = theme;
+  if(mode==="rain"){
+    for(let i=0;i<60;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
     }
+  }
 
-    themeToggle.addEventListener("click", () => {
-      const next = document.body.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      applyTheme(next);
-    });
-
-    applyTheme(getTheme());
-
-    const bgState = {
-      mode: "none",
-      snow: [],
-      rain: [],
-      flash: 0
-    };
-
-    effectSelect.value = localStorage.getItem("effect") || "none";
-    bgState.mode = effectSelect.value;
-
-    effectSelect.addEventListener("change", (e) => {
-      bgState.mode = e.target.value;
-      localStorage.setItem("effect", bgState.mode);
-      buildParticles();
-    });
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth * devicePixelRatio;
-      canvas.height = window.innerHeight * devicePixelRatio;
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      buildParticles();
+  if(mode==="thunder"){
+    if(Math.random()<0.02){
+      ctx.fillStyle="white";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
     }
+  }
 
-    window.addEventListener("resize", resizeCanvas);
+  requestAnimationFrame(draw);
+}
+draw();
 
-    function makeSnowflake() {
-      return {
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        r: 1 + Math.random() * 2.2,
-        vy: 0.3 + Math.random() * 1.1,
-        vx: -0.35 + Math.random() * 0.7,
-        wobble: Math.random() * Math.PI * 2
-      };
-    }
-
-    function makeRaindrop() {
-      return {
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        len: 10 + Math.random() * 16,
-        vy: 7 + Math.random() * 8,
-        vx: -1 + Math.random() * 2
-      };
-    }
-
-    function buildParticles() {
-      const snowCount = Math.min(70, Math.max(28, Math.floor(window.innerWidth / 16)));
-      const rainCount = Math.min(90, Math.max(35, Math.floor(window.innerWidth / 14)));
-      bgState.snow = Array.from({ length: snowCount }, makeSnowflake);
-      bgState.rain = Array.from({ length: rainCount }, makeRaindrop);
-    }
-
-    function draw() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      ctx.clearRect(0, 0, w, h);
-
-      if (bgState.mode === "snow") {
-        ctx.fillStyle = document.body.getAttribute("data-theme") === "light" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.9)";
-        bgState.snow.forEach((s) => {
-          s.y += s.vy;
-          s.x += s.vx + Math.sin(s.wobble) * 0.4;
-          s.wobble += 0.04;
-
-          if (s.y > h + 10) {
-            s.y = -10;
-            s.x = Math.random() * w;
-          }
-          if (s.x < -10) s.x = w + 10;
-          if (s.x > w + 10) s.x = -10;
-
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-      } else if (bgState.mode === "rain") {
-        ctx.strokeStyle = document.body.getAttribute("data-theme") === "light" ? "rgba(65,105,225,0.18)" : "rgba(173,216,230,0.22)";
-        ctx.lineWidth = 1.4;
-        bgState.rain.forEach((r) => {
-          r.y += r.vy;
-          r.x += r.vx;
-
-          if (r.y > h + 20) {
-            r.y = -20;
-            r.x = Math.random() * w;
-          }
-          if (r.x < -20) r.x = w + 20;
-          if (r.x > w + 20) r.x = -20;
-
-          ctx.beginPath();
-          ctx.moveTo(r.x, r.y);
-          ctx.lineTo(r.x + 3, r.y + r.len);
-          ctx.stroke();
-        });
-      } else if (bgState.mode === "thunder") {
-        if (Math.random() < 0.015) bgState.flash = 1;
-        if (bgState.flash > 0.01) {
-          ctx.fillStyle = `rgba(255,255,255,${bgState.flash * 0.2})`;
-          ctx.fillRect(0, 0, w, h);
-          bgState.flash *= 0.88;
-        } else {
-          bgState.flash = 0;
-        }
-      }
-
-      requestAnimationFrame(draw);
-    }
-
-    resizeCanvas();
-    draw();
-  </script>
+</script>
 </body>
 </html>
