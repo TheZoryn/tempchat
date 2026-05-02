@@ -6,64 +6,70 @@
   <style>
     body {
       margin: 0;
-      font-family: Arial;
+      font-family: system-ui;
       height: 100vh;
       display: flex;
       flex-direction: column;
-      background: #0b0b0b;
+      background: #0f0f10;
       color: white;
     }
 
     .header {
       padding: 12px;
       border-bottom: 1px solid #222;
+      font-weight: 600;
     }
 
     #chat {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .msg {
-      margin: 6px 0;
-      padding: 10px;
-      border-radius: 10px;
-      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 14px;
+      max-width: fit-content;
+      font-size: 14px;
+      line-height: 1.4;
     }
 
     .me {
-      background: #00c896;
-      color: black;
-      margin-left: auto;
+      background: #5865f2;
+      align-self: flex-end;
     }
 
     .other {
-      background: #1e1e1e;
+      background: #2b2d31;
+      align-self: flex-start;
     }
 
     .inputBox {
       display: flex;
       padding: 10px;
       border-top: 1px solid #222;
+      gap: 8px;
     }
 
     input {
       flex: 1;
       padding: 10px;
-      border-radius: 8px;
+      border-radius: 20px;
       border: none;
       outline: none;
-      background: #1b1b1b;
+      background: #1e1f22;
       color: white;
     }
 
     button {
-      margin-left: 8px;
-      padding: 10px;
+      padding: 10px 16px;
       border: none;
-      border-radius: 8px;
-      background: #00c896;
+      border-radius: 20px;
+      background: #5865f2;
+      color: white;
       cursor: pointer;
     }
   </style>
@@ -79,7 +85,7 @@
 <div id="chat"></div>
 
 <div class="inputBox">
-  <input id="msg" placeholder="Type message..." />
+  <input id="msg" placeholder="Type a message..." />
   <button id="sendBtn">Send</button>
 </div>
 
@@ -94,7 +100,6 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 YOUR FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
   authDomain: "temp-chat-6f08b.firebaseapp.com",
@@ -104,7 +109,6 @@ const firebaseConfig = {
   appId: "1:388611361050:web:1db50e9927a3bc794e84a3"
 };
 
-// INIT FIREBASE
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -114,22 +118,20 @@ const username = params.get("user") || localStorage.getItem("username");
 const room = params.get("room") || localStorage.getItem("room");
 
 if (!username || !room) {
-  alert("Go back and enter details");
   window.location.href = "index.html";
 }
 
-// SET HEADER
+// HEADER
 document.getElementById("roomName").innerText = "Room: " + room;
 document.getElementById("userName").innerText = "You: " + username;
 
-// FIRESTORE PATH
+// FIRESTORE
 const chatRef = collection(db, "rooms", room, "messages");
 
-// SEND FUNCTION
+// SEND
 async function send() {
   const input = document.getElementById("msg");
   const text = input.value.trim();
-
   if (!text) return;
 
   await addDoc(chatRef, {
@@ -141,8 +143,16 @@ async function send() {
   input.value = "";
 }
 
-// CONNECT BUTTON
+// BUTTON CLICK
 document.getElementById("sendBtn").addEventListener("click", send);
+
+// ENTER KEY (PC + MOBILE)
+document.getElementById("msg").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send();
+  }
+});
 
 // LIVE MESSAGES
 const q = query(chatRef, orderBy("time"));
@@ -156,7 +166,7 @@ onSnapshot(q, (snapshot) => {
 
     const div = document.createElement("div");
     div.className = "msg " + (m.user === username ? "me" : "other");
-    div.innerText = m.user + ": " + m.text;
+    div.innerHTML = "<b>" + m.user + "</b><br>" + m.text;
 
     chat.appendChild(div);
   });
