@@ -27,7 +27,6 @@ body{
   height:100vh;
 }
 
-/* canvas fix */
 canvas{
   position:fixed;
   top:0;
@@ -36,7 +35,6 @@ canvas{
   pointer-events:none;
 }
 
-/* header */
 .header{
   display:flex;
   justify-content:space-between;
@@ -46,7 +44,6 @@ canvas{
 }
 #info{font-size:12px;opacity:.7}
 
-/* chat */
 #chat{
   flex:1;
   overflow-y:auto;
@@ -56,19 +53,12 @@ canvas{
   gap:8px;
 }
 
-.msg{
-  max-width:75%;
-}
+.msg{max-width:75%;}
 .me{align-self:flex-end;text-align:right}
 .other{align-self:flex-start}
 
-/* username gradient */
-.name{
-  font-size:11px;
-  font-weight:bold;
-}
+.name{font-size:11px;font-weight:bold;}
 
-/* bubble */
 .bubble{
   padding:10px;
   border-radius:14px;
@@ -80,14 +70,12 @@ canvas{
   color:#fff;
 }
 
-/* meta */
 .meta{
   font-size:10px;
   opacity:.6;
   margin-top:4px;
 }
 
-/* input */
 .inputBox{
   display:flex;
   padding:8px;
@@ -107,6 +95,26 @@ button{
   border-radius:20px;
   cursor:pointer;
 }
+
+/* NEW: members panel */
+#membersPanel{
+  position:fixed;
+  right:0;
+  top:0;
+  width:220px;
+  height:100%;
+  background:var(--box);
+  border-left:1px solid #0003;
+  padding:10px;
+  display:none;
+  overflow-y:auto;
+}
+
+.member{
+  padding:6px;
+  font-size:13px;
+  border-bottom:1px solid #0002;
+}
 </style>
 </head>
 
@@ -117,6 +125,8 @@ button{
 <div class="header">
   <div id="info"></div>
   <div>
+    <button id="copyLink">🔗</button>
+    <button id="membersBtn">👥</button>
     <select id="effect">
       <option value="none">None</option>
       <option value="snow">Snow</option>
@@ -134,11 +144,16 @@ button{
   <button id="sendBtn">Send</button>
 </div>
 
+<div id="membersPanel">
+  <h3>Members</h3>
+  <div id="membersList"></div>
+</div>
+
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
 getFirestore,collection,addDoc,query,orderBy,onSnapshot,
-doc,setDoc,updateDoc,deleteDoc
+doc,setDoc,updateDoc,deleteDoc,getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig={
@@ -150,41 +165,60 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-/* params */
 const p=new URLSearchParams(location.search);
 const user=p.get("user");
 const room=p.get("room");
 
-/* UI */
 const chat=document.getElementById("chat");
 const msgInput=document.getElementById("msg");
 const info=document.getElementById("info");
 
-/* gradient */
-function grad(name){
-  const g=[
-["#ff7eb3","#ff758c"],
-["#7afcff","#00c6ff"],
-["#fbc2eb","#a6c1ee"],
-["#fddb92","#d1fdff"],
-["#84fab0","#8fd3f4"]
-];
-return g[name.length%g.length];
+const membersBtn=document.getElementById("membersBtn");
+const membersPanel=document.getElementById("membersPanel");
+const membersList=document.getElementById("membersList");
+
+membersBtn.onclick=()=>{
+  membersPanel.style.display=membersPanel.style.display==="none"?"block":"none";
+};
+
+// COPY LINK
+document.getElementById("copyLink").onclick=()=>{
+  navigator.clipboard.writeText(location.href);
+  alert("Link copied!");
+};
+
+// ADMIN SYSTEM
+const metaRef=doc(db,"rooms",room,"meta","data");
+const metaSnap=await getDoc(metaRef);
+
+if(!metaSnap.exists()){
+  await setDoc(metaRef,{admin:user});
 }
 
-/* presence */
+const admin=(await getDoc(metaRef)).data().admin;
+
+function grad(name){
+  const g=[["#ff7eb3","#ff758c"],["#7afcff","#00c6ff"],["#fbc2eb","#a6c1ee"],["#fddb92","#d1fdff"],["#84fab0","#8fd3f4"]];
+  return g[name.length%g.length];
+}
+
 const presRef=doc(db,"rooms",room,"presence",user);
 await setDoc(presRef,{online:true});
-
 window.addEventListener("beforeunload",()=>deleteDoc(presRef));
 
 onSnapshot(collection(db,"rooms",room,"presence"),snap=>{
   let users=[];
-  snap.forEach(d=>users.push(d.id));
+  membersList.innerHTML="";
+  snap.forEach(d=>{
+    users.push(d.id);
+    const div=document.createElement("div");
+    div.className="member";
+    div.innerText=d.id + (d.id===admin?" 👑":"");
+    membersList.appendChild(div);
+  });
   info.innerText=`${room} • ${users.length} online`;
 });
 
-/* send */
 const messagesRef=collection(db,"rooms",room,"messages");
 
 async function send(){
@@ -202,11 +236,8 @@ async function send(){
 }
 
 document.getElementById("sendBtn").onclick=send;
-msgInput.addEventListener("keypress",e=>{
-  if(e.key==="Enter")send();
-});
+msgInput.addEventListener("keypress",e=>{if(e.key==="Enter")send();});
 
-/* messages */
 onSnapshot(query(messagesRef,orderBy("time")),snap=>{
   chat.innerHTML="";
 
@@ -217,23 +248,31 @@ onSnapshot(query(messagesRef,orderBy("time")),snap=>{
 
     const [c1,c2]=grad(m.user);
 
-    div.innerHTML=`
-      <div class="name" style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-        ${m.user}
-      </div>
-      <div class="bubble">
-        ${m.text}
-        <div class="meta">
-          ${new Date(m.time).toLocaleTimeString()}
-        </div>
-      </div>
-    `;
+    const bubble=document.createElement("div");
+    bubble.className="bubble";
+    bubble.textContent=m.text;
 
-    if(m.user===user){
-      const status=document.createElement("div");
-      status.className="meta";
-      status.innerText=(m.seenBy?.length>1)?"Seen":"Delivered";
-      div.appendChild(status);
+    const name=document.createElement("div");
+    name.className="name";
+    name.style.background=`linear-gradient(45deg,${c1},${c2})`;
+    name.style.webkitBackgroundClip="text";
+    name.style.webkitTextFillColor="transparent";
+    name.innerText=m.user + (m.user===admin?" 👑":"");
+
+    const time=document.createElement("div");
+    time.className="meta";
+    time.innerText=new Date(m.time).toLocaleTimeString();
+
+    bubble.appendChild(time);
+    div.appendChild(name);
+    div.appendChild(bubble);
+
+    // DELETE BUTTON
+    if(m.user===user || user===admin){
+      const del=document.createElement("button");
+      del.innerText="❌";
+      del.onclick=()=>deleteDoc(doc(db,"rooms",room,"messages",docSnap.id));
+      div.appendChild(del);
     }
 
     chat.appendChild(div);
@@ -248,46 +287,32 @@ onSnapshot(query(messagesRef,orderBy("time")),snap=>{
   chat.scrollTop=chat.scrollHeight;
 });
 
-/* theme */
+// THEME
 document.getElementById("theme").onclick=()=>{
   document.body.classList.toggle("light");
 };
 
-/* effects */
+// EFFECTS
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
 
-function resize(){
-  canvas.width=innerWidth;
-  canvas.height=innerHeight;
-}
-resize();
-window.onresize=resize;
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
+resize();window.onresize=resize;
 
 let mode="none";
-effect.onchange=e=>mode=e.target.value;
+document.getElementById("effect").onchange=e=>mode=e.target.value;
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(mode==="snow"){
-    for(let i=0;i<40;i++){
-      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
-    }
+    for(let i=0;i<40;i++) ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
   }
-
   if(mode==="rain"){
-    for(let i=0;i<60;i++){
-      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
-    }
+    for(let i=0;i<60;i++) ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
   }
-
   if(mode==="thunder"){
-    if(Math.random()<0.02){
-      ctx.fillStyle="white";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-    }
-  }
+    if(Math.random()<0.02){ctx.fillStyle="white";ctx.fillRect(0,0,canvas.width,canvas.height);} }
 
   requestAnimationFrame(draw);
 }
