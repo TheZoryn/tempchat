@@ -1,0 +1,552 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Temp Chat</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0b1020;
+      --bg2: #111827;
+      --card: rgba(255,255,255,0.08);
+      --card-border: rgba(255,255,255,0.12);
+      --text: #f8fafc;
+      --muted: rgba(248,250,252,0.72);
+      --field: rgba(255,255,255,0.08);
+      --field-border: rgba(255,255,255,0.12);
+      --accent: #7c3aed;
+      --accent2: #22c55e;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --chip: rgba(255,255,255,0.08);
+      --chip-active: rgba(124,58,237,0.22);
+    }
+
+    body[data-theme="light"] {
+      --bg: #f6f7fb;
+      --bg2: #eef2ff;
+      --card: rgba(255,255,255,0.84);
+      --card-border: rgba(15,23,42,0.08);
+      --text: #0f172a;
+      --muted: rgba(15,23,42,0.65);
+      --field: #ffffff;
+      --field-border: rgba(15,23,42,0.08);
+      --accent: #6d28d9;
+      --accent2: #16a34a;
+      --shadow: 0 24px 80px rgba(15,23,42,0.12);
+      --chip: rgba(15,23,42,0.05);
+      --chip-active: rgba(109,40,217,0.14);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, var(--bg2), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(124,58,237,0.24), transparent 32%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+      pointer-events: auto;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      box-shadow: var(--shadow);
+      font-size: 18px;
+    }
+
+    .theme-btn {
+      pointer-events: auto;
+      height: 48px;
+      min-width: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--text);
+      backdrop-filter: blur(16px);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 92px 18px 24px;
+    }
+
+    .shell {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 560px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: auto -120px -120px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,58,237,0.34), transparent 70%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(40px, 6vw, 68px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      max-width: 8ch;
+    }
+
+    .lead {
+      max-width: 42ch;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin: 0 0 22px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .feature {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+    }
+
+    body[data-theme="light"] .feature {
+      background: rgba(255,255,255,0.64);
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .feature span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+
+    .panel p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border-radius: 16px;
+      border: 1px solid var(--field-border);
+      background: var(--field);
+      color: var(--text);
+      outline: none;
+      font: inherit;
+    }
+
+    input:focus {
+      border-color: rgba(124,58,237,0.65);
+      box-shadow: 0 0 0 4px rgba(124,58,237,0.14);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 6px 0 16px;
+    }
+
+    .segmented button {
+      height: 48px;
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      background: var(--chip);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .segmented button[aria-pressed="true"] {
+      background: var(--chip-active);
+      border-color: rgba(124,58,237,0.35);
+    }
+
+    .segmented button:hover,
+    .primary:hover,
+    .secondary:hover {
+      transform: translateY(-1px);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .primary, .secondary {
+      height: 50px;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+    }
+
+    .secondary {
+      background: var(--chip);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+
+    .smallprint {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .preview {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      background: rgba(255,255,255,0.04);
+    }
+
+    body[data-theme="light"] .preview {
+      background: rgba(255,255,255,0.7);
+    }
+
+    .preview .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .preview code {
+      display: block;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.12);
+      color: var(--text);
+      overflow: hidden;
+      word-break: break-all;
+    }
+
+    .muted-link {
+      color: inherit;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .hero {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .wrap {
+        padding-top: 82px;
+      }
+      .hero, .panel {
+        border-radius: 22px;
+      }
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="topbar">
+    <div class="brand" aria-label="Temp Chat">
+      <div class="logo">✦</div>
+      <div>Temp Chat</div>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle theme">☾</button>
+  </div>
+
+  <main class="wrap">
+    <section class="shell">
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Readable rooms • clean links • temporary by design</div>
+          <h1>Open. Type. Join.</h1>
+          <p class="lead">
+            A fast room-based chat concept with a simple name, a shareable link, and room durations like 10 minutes, 1 day, or 7 days.
+          </p>
+
+          <div class="feature-grid">
+            <div class="feature">
+              <strong>Instant room names</strong>
+              <span>Use short memorable room IDs like <b>study</b>, <b>friends</b>, or <b>movie-night</b>.</span>
+            </div>
+            <div class="feature">
+              <strong>Built for mobile</strong>
+              <span>Big touch targets, clear spacing, and an interface that feels good on phones first.</span>
+            </div>
+            <div class="feature">
+              <strong>Theme switch</strong>
+              <span>Dark and light modes that remember the choice.</span>
+            </div>
+            <div class="feature">
+              <strong>Room duration UI</strong>
+              <span>The frontend already shows your 10 min / 1 day / 7 day idea.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview">
+          <div class="row">
+            <span>Preview link</span>
+            <span>Readable</span>
+          </div>
+          <code id="previewLink">chat.html?room=friends</code>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Create or join</h2>
+        <p>Type a username, pick a room name, choose how long the room should live.</p>
+
+        <div class="field">
+          <div class="label">Username</div>
+          <input id="username" autocomplete="nickname" placeholder="Your name" />
+        </div>
+
+        <div class="field">
+          <div class="label">Room name</div>
+          <input id="room" placeholder="friends, study, movie-night" />
+        </div>
+
+        <div class="field">
+          <div class="label">Room duration</div>
+          <div class="segmented" role="radiogroup" aria-label="Room duration">
+            <button type="button" data-duration="10m" aria-pressed="true">10 min</button>
+            <button type="button" data-duration="1d" aria-pressed="false">1 day</button>
+            <button type="button" data-duration="7d" aria-pressed="false">7 days</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" type="button" id="randomRoomBtn">Random room</button>
+          <button class="primary" type="button" id="joinBtn">Join / Create</button>
+        </div>
+
+        <div class="smallprint">
+          No backend yet. This is the frontend foundation, so the app feels finished before the database comes in.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const body = document.body;
+    const themeBtn = document.getElementById('themeBtn');
+    const usernameInput = document.getElementById('username');
+    const roomInput = document.getElementById('room');
+    const previewLink = document.getElementById('previewLink');
+    const randomRoomBtn = document.getElementById('randomRoomBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    const durationButtons = [...document.querySelectorAll('.segmented button')];
+
+    function getPreferredTheme() {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+
+    function applyTheme(theme) {
+      body.dataset.theme = theme;
+      themeBtn.textContent = theme === 'dark' ? '☾' : '☀';
+      localStorage.setItem('theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }
+
+    function toggleTheme() {
+      applyTheme(body.dataset.theme === 'dark' ? 'light' : 'dark');
+    }
+
+    function slugify(value) {
+      return value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function makeRoomName() {
+      const words = ['calm', 'bright', 'orbit', 'pixel', 'lounge', 'paper', 'echo', 'pulse', 'spark', 'drift'];
+      return `${words[Math.floor(Math.random() * words.length)]}-${words[Math.floor(Math.random() * words.length)]}`;
+    }
+
+    let selectedDuration = '10m';
+
+    durationButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedDuration = btn.dataset.duration;
+        durationButtons.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+      });
+    });
+
+    function updatePreview() {
+      const room = slugify(roomInput.value) || 'friends';
+      previewLink.textContent = `chat.html?room=${room}`;
+    }
+
+    roomInput.addEventListener('input', updatePreview);
+
+    randomRoomBtn.addEventListener('click', () => {
+      roomInput.value = makeRoomName();
+      updatePreview();
+      roomInput.focus();
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const username = usernameInput.value.trim();
+      const room = slugify(roomInput.value);
+
+      if (!username || !room) {
+        alert('Please enter both username and room name.');
+        return;
+      }
+
+      localStorage.setItem('username', username);
+      localStorage.setItem('room', room);
+      localStorage.setItem('duration', selectedDuration);
+
+      const target = `chat.html?room=${encodeURIComponent(room)}&user=${encodeURIComponent(username)}&duration=${encodeURIComponent(selectedDuration)}`;
+      window.location.href = target;
+    });
+
+    themeBtn.addEventListener('click', toggleTheme);
+
+    applyTheme(getPreferredTheme());
+    updatePreview();
+  </script>
+</body>
+</html>

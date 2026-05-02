@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Temp Chat</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #0b0b0b;
+      color: white;
+    }
+
+    .header {
+      padding: 12px;
+      border-bottom: 1px solid #222;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .msg {
+      margin: 6px 0;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+
+    .me {
+      background: #00c896;
+      color: black;
+      margin-left: auto;
+    }
+
+    .other {
+      background: #1e1e1e;
+    }
+
+    .inputBox {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #222;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: #1b1b1b;
+      color: white;
+    }
+
+    button {
+      margin-left: 8px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #00c896;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <div id="roomName"></div>
+  <div id="userName" style="font-size:12px; opacity:0.6;"></div>
+</div>
+
+<div id="chat"></div>
+
+<div class="inputBox">
+  <input id="msg" placeholder="Type message..." />
+  <button onclick="send()">Send</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// 🔥 YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
+  authDomain: "temp-chat-6f08b.firebaseapp.com",
+  projectId: "temp-chat-6f08b",
+  storageBucket: "temp-chat-6f08b.firebasestorage.app",
+  messagingSenderId: "388611361050",
+  appId: "1:388611361050:web:1db50e9927a3bc794e84a3"
+};
+
+// INIT FIREBASE
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// GET USER + ROOM
+const params = new URLSearchParams(window.location.search);
+const username = params.get("user") || localStorage.getItem("username");
+const room = params.get("room") || localStorage.getItem("room");
+
+if (!username || !room) {
+  alert("Go back and enter details");
+  window.location.href = "index.html";
+}
+
+// SET HEADER
+document.getElementById("roomName").innerText = "Room: " + room;
+document.getElementById("userName").innerText = "You: " + username;
+
+// FIRESTORE PATH
+const chatRef = collection(db, "rooms", room, "messages");
+
+// SEND MESSAGE
+window.send = async function () {
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  await addDoc(chatRef, {
+    text: text,
+    user: username,
+    time: Date.now()
+  });
+
+  input.value = "";
+};
+
+// LISTEN FOR MESSAGES
+const q = query(chatRef, orderBy("time"));
+
+onSnapshot(q, (snapshot) => {
+  const chat = document.getElementById("chat");
+  chat.innerHTML = "";
+
+  snapshot.forEach((doc) => {
+    const m = doc.data();
+
+    const div = document.createElement("div");
+    div.className = "msg " + (m.user === username ? "me" : "other");
+    div.innerText = m.user + ": " + m.text;
+
+    chat.appendChild(div);
+  });
+
+  chat.scrollTop = chat.scrollHeight;
+});
+</script>
+
+</body>
+</html>
