@@ -2,150 +2,136 @@
 <html>
 <head>
   <title>Temp Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    :root {
-      --bg: #0f0f10;
-      --text: #ffffff;
-      --box: #2b2d31;
-      --me: #5865f2;
-      --input: #1e1f22;
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0f0f10;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
     }
 
     body.light {
-      --bg: #f2f2f2;
-      --text: #111;
-      --box: #e4e6eb;
-      --me: #4f46e5;
-      --input: #ffffff;
+      background: #f2f2f2;
+      color: black;
     }
 
-    body {
-      margin: 0;
-      font-family: system-ui;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: var(--bg);
-      color: var(--text);
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
     }
 
     .header {
-      padding: 12px;
-      border-bottom: 1px solid #222;
+      z-index: 2;
+      padding: 10px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
     }
 
     #chat {
       flex: 1;
-      padding: 12px;
       overflow-y: auto;
+      padding: 10px;
+      z-index: 2;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
     }
 
     .msg {
-      display: flex;
-      flex-direction: column;
-      max-width: 70%;
+      max-width: 75%;
     }
+
+    .me { align-self: flex-end; text-align: right; }
+    .other { align-self: flex-start; }
 
     .name {
       font-size: 11px;
-      opacity: 0.6;
       margin-bottom: 2px;
+      font-weight: bold;
+      background: linear-gradient(45deg, #ff7eb3, #7afcff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .text {
-      padding: 8px 12px;
-      border-radius: 12px;
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: #2b2d31;
     }
 
-    .me {
-      align-self: flex-end;
-    }
-
-    .other {
-      align-self: flex-start;
-    }
-
-    .me .text {
-      background: var(--me);
+    .me .bubble {
+      background: #5865f2;
       color: white;
     }
 
-    .other .text {
-      background: var(--box);
-    }
-
     .inputBox {
+      z-index: 2;
       display: flex;
       padding: 10px;
-      border-top: 1px solid #222;
       gap: 8px;
+      background: rgba(0,0,0,0.4);
     }
 
     input {
       flex: 1;
-      padding: 10px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 25px;
       border: none;
       outline: none;
-      background: var(--input);
-      color: var(--text);
-    }
-
-    button {
-      padding: 10px 14px;
-      border: none;
-      border-radius: 20px;
-      background: var(--me);
+      background: #1e1f22;
       color: white;
-      cursor: pointer;
     }
 
-    .toggle {
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 10px;
+    button, select {
+      border-radius: 20px;
+      border: none;
+      padding: 8px;
       cursor: pointer;
-      background: var(--box);
     }
   </style>
 </head>
 
 <body>
 
+<canvas id="bg"></canvas>
+
 <div class="header">
+  <div id="roomInfo"></div>
   <div>
-    <div id="roomName"></div>
-    <div id="userName" style="font-size:12px; opacity:0.6;"></div>
+    <select id="effect">
+      <option value="none">None</option>
+      <option value="snow">Snow</option>
+      <option value="rain">Rain</option>
+      <option value="thunder">Thunder</option>
+    </select>
+    <button id="themeToggle">🌙</button>
   </div>
-  <div class="toggle" id="themeToggle">Toggle Theme</div>
 </div>
 
 <div id="chat"></div>
 
 <div class="inputBox">
-  <input id="msg" placeholder="Type a message..." />
+  <input id="msg" placeholder="Message..." />
   <button id="sendBtn">Send</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getFirestore,
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+  doc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
   authDomain: "temp-chat-6f08b.firebaseapp.com",
@@ -158,88 +144,108 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Get user + room
-const params = new URLSearchParams(window.location.search);
-const username = params.get("user") || localStorage.getItem("username");
-const room = params.get("room") || localStorage.getItem("room");
+// params
+const params = new URLSearchParams(location.search);
+const username = params.get("user");
+const room = params.get("room");
+const durationParam = params.get("duration") || "10m";
 
-if (!username || !room) {
-  window.location.href = "index.html";
+const durationMap = {
+  "1m":60000,"5m":300000,"10m":600000,"1d":86400000,"7d":604800000
+};
+const duration = durationMap[durationParam];
+
+document.getElementById("roomInfo").innerText = room + " • " + username;
+
+// gradient per user
+function getGradient(name){
+  const colors = [
+    ["#ff7eb3","#ff758c"],
+    ["#7afcff","#00c6ff"],
+    ["#fbc2eb","#a6c1ee"],
+    ["#fddb92","#d1fdff"],
+    ["#84fab0","#8fd3f4"]
+  ];
+  let index = name.length % colors.length;
+  return colors[index];
 }
 
-document.getElementById("roomName").innerText = "Room: " + room;
-document.getElementById("userName").innerText = "You: " + username;
+// firestore
+const roomRef = doc(db,"rooms",room);
+await setDoc(roomRef,{createdAt:Date.now(),expireAt:Date.now()+duration},{merge:true});
 
-// Firestore path
-const chatRef = collection(db, "rooms", room, "messages");
+const chatRef = collection(db,"rooms",room,"messages");
 
-// Send message
-async function send() {
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
-  if (!text) return;
-
-  await addDoc(chatRef, {
-    text: text,
-    user: username,
-    time: Date.now()
-  });
-
-  input.value = "";
+// send
+async function send(){
+  const text = msg.value.trim();
+  if(!text) return;
+  await addDoc(chatRef,{user:username,text,time:Date.now()});
+  msg.value="";
 }
+sendBtn.onclick=send;
+msg.onkeypress=e=>{if(e.key==="Enter")send()};
 
-// Button click
-document.getElementById("sendBtn").addEventListener("click", send);
+// listen
+onSnapshot(query(chatRef,orderBy("time")),snap=>{
+  chat.innerHTML="";
+  snap.forEach(doc=>{
+    const m=doc.data();
+    const div=document.createElement("div");
+    div.className="msg "+(m.user===username?"me":"other");
 
-// Enter key
-document.getElementById("msg").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    send();
-  }
-});
+    const [c1,c2]=getGradient(m.user);
 
-// Live messages
-const q = query(chatRef, orderBy("time"));
-
-onSnapshot(q, (snapshot) => {
-  const chat = document.getElementById("chat");
-  chat.innerHTML = "";
-
-  snapshot.forEach((doc) => {
-    const m = doc.data();
-
-    const div = document.createElement("div");
-    div.className = "msg " + (m.user === username ? "me" : "other");
-
-    div.innerHTML = `
-      <div class="name">${m.user}</div>
-      <div class="text">${m.text}</div>
+    div.innerHTML=`
+      <div class="name" style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        ${m.user}
+      </div>
+      <div class="bubble">${m.text}</div>
     `;
 
     chat.appendChild(div);
   });
-
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop=chat.scrollHeight;
 });
 
-// 🌗 Theme toggle
-const toggle = document.getElementById("themeToggle");
+// theme
+themeToggle.onclick=()=>document.body.classList.toggle("light");
 
-// load saved theme
-if (localStorage.getItem("theme") === "light") {
-  document.body.classList.add("light");
-}
+// effects
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-toggle.onclick = () => {
-  document.body.classList.toggle("light");
+let mode="none";
+effect.onchange=e=>mode=e.target.value;
 
-  if (document.body.classList.contains("light")) {
-    localStorage.setItem("theme", "light");
-  } else {
-    localStorage.setItem("theme", "dark");
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(mode==="snow"){
+    for(let i=0;i<50;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
+    }
   }
-};
+
+  if(mode==="rain"){
+    for(let i=0;i<80;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
+    }
+  }
+
+  if(mode==="thunder"){
+    if(Math.random()<0.02){
+      ctx.fillStyle="white";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();
+
 </script>
 
 </body>
