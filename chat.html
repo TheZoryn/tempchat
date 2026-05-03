@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Vibely Chat (Stable)</title>
+<title>Vibely Chat</title>
 <style>
 :root{
   --bg:#0f172a;
@@ -24,7 +24,7 @@ body.light{
 html,body{height:100%}
 body{
   margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   background:var(--bg);
   color:var(--text);
   display:flex;
@@ -34,66 +34,87 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:10px;
+  gap:10px;
+  padding:10px 12px;
   border-bottom:1px solid var(--border);
   background:rgba(0,0,0,.05);
 }
 #info{font-size:12px;font-weight:700}
+#status{font-size:11px;color:var(--muted);margin-top:2px;min-height:14px}
 #chat{
   flex:1;
   overflow:auto;
-  padding:10px;
+  padding:12px;
   display:flex;
   flex-direction:column;
   gap:10px;
 }
-.msg{max-width:75%}
+.msg{max-width:min(80%,620px)}
 .me{align-self:flex-end;text-align:right}
 .other{align-self:flex-start}
+.name{font-size:11px;font-weight:800;line-height:1;margin-bottom:4px}
 .bubble{
-  padding:10px;
-  border-radius:14px;
+  padding:10px 12px;
+  border-radius:16px;
   background:var(--box);
   border:1px solid var(--border);
   word-break:break-word;
 }
-.me .bubble{background:var(--me);color:white}
-.meta{font-size:10px;opacity:.7;margin-top:4px}
+.me .bubble{background:linear-gradient(135deg,var(--me),#4f46e5);color:#fff;border-color:transparent}
+.meta{font-size:10px;opacity:.7;margin-top:6px}
 .inputBox{
   display:flex;
+  gap:8px;
   padding:10px;
   border-top:1px solid var(--border);
-  gap:8px;
+  background:rgba(0,0,0,.05);
 }
 input{
   flex:1;
-  padding:12px;
+  padding:12px 14px;
   border-radius:14px;
   border:1px solid var(--border);
   outline:none;
   background:var(--box);
   color:var(--text);
+  font:inherit;
 }
 button{
   padding:10px 14px;
   border:none;
   border-radius:14px;
   cursor:pointer;
+  background:var(--box);
+  color:var(--text);
 }
-#sendBtn{background:var(--me);color:white}
+#sendBtn{background:var(--me);color:#fff;font-weight:700}
+#themeBtn{min-width:44px}
+.errorBox{
+  display:none;
+  margin:10px 12px 0;
+  padding:10px 12px;
+  border-radius:14px;
+  background:#7f1d1d;
+  color:#fff;
+  font-size:12px;
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div id="info">Connecting...</div>
+  <div>
+    <div id="info">Connecting...</div>
+    <div id="status"></div>
+  </div>
   <button id="themeBtn">🌙</button>
 </div>
 
+<div class="errorBox" id="errorBox"></div>
 <div id="chat"></div>
 
 <div class="inputBox">
-  <input id="msg" placeholder="Type message..." />
+  <input id="msg" placeholder="Type message..." autocomplete="off" />
   <button id="sendBtn">Send</button>
 </div>
 
@@ -112,72 +133,118 @@ const db = getFirestore(app);
 
 const params = new URLSearchParams(location.search);
 const room = params.get("room") || "global";
-let user = params.get("user") || "guest";
+const user = params.get("user") || localStorage.getItem("vibely-username") || "guest";
+localStorage.setItem("vibely-username", user);
 
 const chat = document.getElementById("chat");
 const msg = document.getElementById("msg");
 const info = document.getElementById("info");
+const status = document.getElementById("status");
+const errorBox = document.getElementById("errorBox");
 const sendBtn = document.getElementById("sendBtn");
+const themeBtn = document.getElementById("themeBtn");
 
-/* SAFE STATE (FIX FOR YOUR ERROR) */
-let mode = "none"; // FIX: defined before any use
-
-/* THEME */
-document.getElementById("themeBtn").onclick = () => {
-  document.body.classList.toggle("light");
-};
-
-/* PRESENCE */
-const presenceRef = doc(db,"rooms",room,"presence",user);
-setDoc(presenceRef,{online:true,last:Date.now()});
-setInterval(()=>setDoc(presenceRef,{online:true,last:Date.now()}),4000);
-window.addEventListener("beforeunload",()=>deleteDoc(presenceRef));
-
-onSnapshot(collection(db,"rooms",room,"presence"),(snap)=>{
-  let users=0;
-  snap.forEach(()=>users++);
-  info.textContent = `${room} • ${users} online`;
-});
-
-/* SEND */
-async function send(){
-  const text = msg.value.trim();
-  if(!text) return;
-  msg.value="";
-
-  await addDoc(collection(db,"rooms",room,"messages"),{
-    user,text,time:Date.now()
-  });
+function showError(text){
+  errorBox.style.display = "block";
+  errorBox.textContent = text;
 }
 
-sendBtn.onclick = send;
-msg.addEventListener("keydown",e=>{
-  if(e.key==="Enter") send();
+function clearError(){
+  errorBox.style.display = "none";
+  errorBox.textContent = "";
+}
+
+function setStatus(text){
+  status.textContent = text;
+}
+
+function setTheme(theme){
+  document.body.classList.toggle("light", theme === "light");
+  themeBtn.textContent = theme === "light" ? "☀" : "🌙";
+  localStorage.setItem("vibely-theme", theme);
+}
+setTheme(localStorage.getItem("vibely-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+themeBtn.onclick = () => setTheme(document.body.classList.contains("light") ? "dark" : "light");
+
+info.textContent = `${room} • ${user}`;
+
+/* presence: active only */
+const presenceRef = doc(db, "rooms", room, "presence", user);
+let heartbeat = null;
+async function ping(){
+  await setDoc(presenceRef, { user, lastSeen: Date.now(), room }, { merge: true });
+}
+try {
+  await ping();
+  heartbeat = setInterval(() => ping().catch(()=>{}), 3000);
+} catch (e) {
+  console.error(e);
+  showError("Presence failed. Check Firestore rules.");
+}
+window.addEventListener("beforeunload", () => {
+  clearInterval(heartbeat);
+  deleteDoc(presenceRef).catch(()=>{});
 });
 
-/* MESSAGES */
-onSnapshot(query(collection(db,"rooms",room,"messages"),orderBy("time")),snap=>{
-  chat.innerHTML="";
+afterInit();
 
-  snap.forEach(d=>{
-    const m=d.data();
-    const div=document.createElement("div");
-    div.className="msg"+(m.user===user?" me":" other");
-
-    div.innerHTML=`
-      <div class="bubble">
-        <b>${m.user}</b><br>
-        ${m.text}
-        <div class="meta">${new Date(m.time).toLocaleTimeString()}</div>
-      </div>
-    `;
-
-    chat.appendChild(div);
+function afterInit(){
+  /* online users */
+  onSnapshot(collection(db, "rooms", room, "presence"), snap => {
+    const now = Date.now();
+    let online = 0;
+    snap.forEach(d => {
+      const data = d.data() || {};
+      if (now - Number(data.lastSeen || 0) < 7000) online++;
+    });
+    setStatus(`${online} online`);
+  }, err => {
+    console.error(err);
+    showError("Could not read online users. Firestore rules/index may be blocking it.");
   });
 
-  chat.scrollTop=chat.scrollHeight;
-});
+  /* messages */
+  const messagesRef = collection(db, "rooms", room, "messages");
+  onSnapshot(query(messagesRef, orderBy("time")), snap => {
+    clearError();
+    const isAtBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
+    chat.innerHTML = "";
+    snap.forEach(docSnap => {
+      const m = docSnap.data();
+      const div = document.createElement("div");
+      div.className = `msg ${m.user === user ? 'me' : 'other'}`;
+      div.innerHTML = `
+        <div class="name">${m.user}</div>
+        <div class="bubble">
+          <div class="text"></div>
+          <div class="meta">${new Date(m.time || Date.now()).toLocaleTimeString()}</div>
+        </div>
+      `;
+      div.querySelector(".text").textContent = m.text || "";
+      chat.appendChild(div);
+    });
+    if (isAtBottom) chat.scrollTop = chat.scrollHeight;
+  }, err => {
+    console.error(err);
+    showError("Could not read messages. Firestore rules/index may be blocking it.");
+  });
 
+  async function send(){
+    const text = msg.value.trim();
+    if (!text) return;
+    msg.value = "";
+    try {
+      await addDoc(messagesRef, { user, text, time: Date.now() });
+      clearError();
+    } catch (e) {
+      console.error(e);
+      showError("Message send failed. Check Firestore rules.");
+    }
+  }
+
+  sendBtn.onclick = send;
+  msg.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+}
 </script>
 </body>
 </html>
