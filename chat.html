@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Vibely Chat</title>
 
 <style>
@@ -10,310 +10,792 @@
   --bg:#0f172a;
   --text:#e5e7eb;
   --box:#1e293b;
+  --box2:#233047;
   --me:#6366f1;
+  --border:rgba(255,255,255,.08);
+  --muted:rgba(229,231,235,.7);
+  --shadow:0 12px 40px rgba(0,0,0,.2);
 }
+
 body.light{
   --bg:#f3f4f6;
-  --text:#111;
+  --text:#111827;
   --box:#ffffff;
+  --box2:#f9fafb;
+  --border:rgba(15,23,42,.08);
+  --muted:rgba(17,24,39,.65);
+  --shadow:0 12px 40px rgba(15,23,42,.08);
 }
+
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
-  font-family:system-ui;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   background:var(--bg);
   color:var(--text);
   display:flex;
   flex-direction:column;
-  height:100vh;
+  overflow:hidden;
 }
 
-/* canvas */
 canvas{
   position:fixed;
-  top:0;
-  left:0;
+  inset:0;
   z-index:-1;
   pointer-events:none;
 }
 
-/* header */
 .header{
   display:flex;
   justify-content:space-between;
-  padding:10px;
-  background:var(--box);
   align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  background:rgba(0,0,0,.04);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow);
+  z-index:20;
 }
 
-#info{font-size:12px;opacity:.7}
+.headerLeft{
+  min-width:0;
+}
 
-/* typing indicator */
-#typing{
+#info{
   font-size:12px;
-  padding:4px 10px;
-  opacity:.8;
-  height:18px;
+  opacity:.9;
+  line-height:1.2;
+  font-weight:600;
 }
 
-/* chat */
+#typing{
+  margin-top:2px;
+  font-size:12px;
+  color:var(--muted);
+  height:16px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.headerRight{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-shrink:0;
+}
+
+button,select{
+  border:none;
+  outline:none;
+  border-radius:14px;
+  background:var(--box);
+  color:var(--text);
+  box-shadow:var(--shadow);
+}
+
+button{
+  cursor:pointer;
+  padding:10px 12px;
+}
+
+select{
+  padding:10px 12px;
+}
+
+button:hover,select:hover{
+  filter:brightness(1.05);
+}
+
 #chat{
   flex:1;
   overflow-y:auto;
-  padding:10px;
+  padding:12px;
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:10px;
+  scroll-behavior:smooth;
 }
 
 .msg{
-  max-width:75%;
+  max-width:min(78%, 560px);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  animation:pop .15s ease-out;
 }
-.me{align-self:flex-end;text-align:right}
-.other{align-self:flex-start}
 
-/* bubble */
+@keyframes pop{
+  from{transform:translateY(6px);opacity:0}
+  to{transform:translateY(0);opacity:1}
+}
+
+.me{align-self:flex-end;align-items:flex-end;text-align:right}
+.other{align-self:flex-start;align-items:flex-start}
+
+.name{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.02em;
+  line-height:1;
+}
+
 .bubble{
-  padding:10px;
-  border-radius:14px;
+  position:relative;
+  padding:10px 12px 8px;
+  border-radius:16px;
   background:var(--box);
+  border:1px solid var(--border);
   word-break:break-word;
+  box-shadow:var(--shadow);
+  min-width:110px;
 }
+
 .me .bubble{
-  background:var(--me);
+  background:linear-gradient(135deg, var(--me), #4f46e5);
   color:#fff;
+  border-color:transparent;
 }
 
-/* meta */
+.text{
+  font-size:14px;
+  line-height:1.45;
+  white-space:pre-wrap;
+}
+
 .meta{
+  margin-top:6px;
   font-size:10px;
-  opacity:.6;
-  margin-top:4px;
+  opacity:.7;
 }
 
-/* input */
+.reactions{
+  display:flex;
+  gap:6px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+
+.reactBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:11px;
+  padding:6px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.08);
+  cursor:pointer;
+  user-select:none;
+}
+
+.other .reactBtn{
+  background:rgba(0,0,0,.04);
+  border-color:var(--border);
+}
+
+.reactBtn.active{
+  transform:translateY(-1px);
+  box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+
+.deleteBtn{
+  position:absolute;
+  top:4px;
+  right:-18px;
+  opacity:0;
+  transform:scale(.95);
+  transition:.15s ease;
+  cursor:pointer;
+  font-size:12px;
+  background:transparent;
+  box-shadow:none;
+  padding:0;
+}
+
+.msg:hover .deleteBtn,
+.msg:focus-within .deleteBtn{
+  opacity:1;
+}
+
 .inputBox{
   display:flex;
-  padding:8px;
-  gap:6px;
-  background:var(--box);
+  gap:8px;
+  padding:10px;
+  background:rgba(0,0,0,.04);
+  border-top:1px solid var(--border);
+  backdrop-filter:blur(12px);
 }
-input{
+
+#msg{
   flex:1;
-  padding:12px;
-  border-radius:20px;
-  border:none;
+  padding:13px 16px;
+  border-radius:18px;
+  border:1px solid var(--border);
   outline:none;
+  background:var(--box);
+  color:var(--text);
+  box-shadow:var(--shadow);
+  font:inherit;
 }
-button{
-  padding:10px 14px;
-  border:none;
-  border-radius:20px;
-  cursor:pointer;
+
+#msg::placeholder{color:var(--muted)}
+
+#sendBtn{
+  min-width:74px;
+  background:linear-gradient(135deg, var(--me), #4f46e5);
+  color:#fff;
+  font-weight:700;
+}
+
+/* members panel */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(2,6,23,.45);
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+  z-index:30;
+}
+#overlay.active{
+  opacity:1;
+  pointer-events:auto;
+}
+
+#membersPanel{
+  position:fixed;
+  top:0;
+  right:0;
+  width:min(320px, 88vw);
+  height:100%;
+  background:var(--box);
+  border-left:1px solid var(--border);
+  transform:translateX(100%);
+  transition:.22s ease;
+  z-index:35;
+  display:flex;
+  flex-direction:column;
+  box-shadow:-16px 0 40px rgba(0,0,0,.18);
+}
+#membersPanel.active{transform:translateX(0)}
+
+.membersTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px;
+  border-bottom:1px solid var(--border);
+}
+
+.membersTop strong{
+  font-size:15px;
+}
+
+.membersSub{
+  padding:0 14px 12px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+#membersList{
+  padding:10px 10px 14px;
+  overflow:auto;
+  flex:1;
+}
+
+.member{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:var(--box2);
+  border:1px solid var(--border);
+  margin-bottom:8px;
+}
+
+.memberLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#22c55e;
+  box-shadow:0 0 0 4px rgba(34,197,94,.12);
+  flex-shrink:0;
+}
+
+.memberName{
+  font-size:14px;
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.badge{
+  font-size:10px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(34,197,94,.14);
+  color:#22c55e;
+  border:1px solid rgba(34,197,94,.18);
+  flex-shrink:0;
+}
+
+.emptyState{
+  padding:18px 12px;
+  color:var(--muted);
+  font-size:13px;
+  text-align:center;
+}
+
+@media (max-width:560px){
+  .header{padding:10px 10px}
+  .headerRight{gap:6px}
+  button,select{padding:9px 10px}
+  .msg{max-width:86%}
+  #sendBtn{min-width:66px}
 }
 </style>
 </head>
-
 <body>
 
 <canvas id="bg"></canvas>
 
 <div class="header">
-  <div>
-    <div id="info"></div>
+  <div class="headerLeft">
+    <div id="info">Loading...</div>
     <div id="typing"></div>
   </div>
-
-  <div>
-    <select id="effect">
+  <div class="headerRight">
+    <button id="copyLink" title="Copy room link">🔗</button>
+    <button id="membersBtn" title="Members">👥</button>
+    <select id="effect" aria-label="Background effect">
       <option value="none">None</option>
       <option value="snow">Snow</option>
       <option value="rain">Rain</option>
       <option value="thunder">Thunder</option>
     </select>
-    <button id="theme">🌙</button>
+    <button id="theme" title="Toggle theme">🌙</button>
   </div>
 </div>
 
 <div id="chat"></div>
 
 <div class="inputBox">
-  <input id="msg" placeholder="Type message...">
+  <input id="msg" placeholder="Type message..." autocomplete="off" />
   <button id="sendBtn">Send</button>
 </div>
 
+<div id="overlay"></div>
+<div id="membersPanel" aria-hidden="true">
+  <div class="membersTop">
+    <strong>Members</strong>
+    <button id="closeMembers" title="Close">✖</button>
+  </div>
+  <div class="membersSub" id="membersSub">People active in this room right now.</div>
+  <div id="membersList"></div>
+</div>
+
 <script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-getFirestore,collection,addDoc,query,orderBy,onSnapshot,
-doc,setDoc,updateDoc,deleteDoc
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig={
-  apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
-  authDomain:"temp-chat-6f08b.firebaseapp.com",
-  projectId:"temp-chat-6f08b"
+const firebaseConfig = {
+  apiKey: "AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
+  authDomain: "temp-chat-6f08b.firebaseapp.com",
+  projectId: "temp-chat-6f08b"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-/* params */
-const p=new URLSearchParams(location.search);
-const user=p.get("user");
-const room=p.get("room");
+const p = new URLSearchParams(location.search);
+const user = p.get("user") || "Guest";
+const room = p.get("room") || "room";
 
-/* UI */
-const chat=document.getElementById("chat");
-const msgInput=document.getElementById("msg");
-const info=document.getElementById("info");
-const typingUI=document.getElementById("typing");
+const chat = document.getElementById("chat");
+const msgInput = document.getElementById("msg");
+const info = document.getElementById("info");
+const typingUI = document.getElementById("typing");
+const membersList = document.getElementById("membersList");
+const membersSub = document.getElementById("membersSub");
+const overlay = document.getElementById("overlay");
+const membersPanel = document.getElementById("membersPanel");
+const themeBtn = document.getElementById("theme");
+const effectSel = document.getElementById("effect");
 
-/* presence */
-const presRef=doc(db,"rooms",room,"presence",user);
-await setDoc(presRef,{online:true});
-window.addEventListener("beforeunload",()=>deleteDoc(presRef));
+function grad(name){
+  const g = [
+    ["#ff7eb3", "#ff758c"],
+    ["#7afcff", "#00c6ff"],
+    ["#fbc2eb", "#a6c1ee"],
+    ["#fddb92", "#d1fdff"],
+    ["#84fab0", "#8fd3f4"]
+  ];
+  return g[name.length % g.length];
+}
 
-/* typing system */
-const typingRef=doc(db,"rooms",room,"typing",user);
+function escapeText(value){
+  return String(value ?? "");
+}
 
-let typingTimeout;
+function openMembers(){
+  membersPanel.classList.add("active");
+  overlay.classList.add("active");
+  membersPanel.setAttribute("aria-hidden", "false");
+}
 
-msgInput.addEventListener("input", async () => {
-  await setDoc(typingRef,{
-    typing:true,
-    time:Date.now()
-  });
+function closeMembers(){
+  membersPanel.classList.remove("active");
+  overlay.classList.remove("active");
+  membersPanel.setAttribute("aria-hidden", "true");
+}
 
-  clearTimeout(typingTimeout);
+document.getElementById("membersBtn").onclick = openMembers;
+document.getElementById("closeMembers").onclick = closeMembers;
+overlay.onclick = closeMembers;
 
-  typingTimeout=setTimeout(async ()=>{
-    await deleteDoc(typingRef);
-  },1500);
+/* theme */
+function getPreferredTheme(){
+  const saved = localStorage.getItem("theme");
+  if(saved === "light" || saved === "dark") return saved;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+function applyTheme(theme){
+  document.body.classList.toggle("light", theme === "light");
+  themeBtn.textContent = theme === "light" ? "☀" : "🌙";
+  document.documentElement.style.colorScheme = theme;
+  localStorage.setItem("theme", theme);
+}
+themeBtn.onclick = () => applyTheme(document.body.classList.contains("light") ? "dark" : "light");
+applyTheme(getPreferredTheme());
+
+/* copy link */
+document.getElementById("copyLink").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    document.getElementById("copyLink").textContent = "✓";
+    setTimeout(() => (document.getElementById("copyLink").textContent = "🔗"), 900);
+  } catch {
+    alert("Copy failed");
+  }
+};
+
+/* presence: active only */
+const presRef = doc(db, "rooms", room, "presence", user);
+let lastBeat = Date.now();
+let beatTimer = null;
+let heartbeatTimer = null;
+let cleanupTimer = null;
+
+async function beat(){
+  lastBeat = Date.now();
+  await setDoc(presRef, {
+    user,
+    lastSeen: lastBeat,
+    room,
+    active: true
+  }, { merge: true });
+}
+
+await beat();
+beatTimer = setInterval(() => {
+  beat().catch(() => {});
+}, 5000);
+
+cleanupTimer = setInterval(async () => {
+  // keep online count based on recent activity; if tab is gone, user drops off after timeout
+  if (document.visibilityState === "visible") {
+    await beat().catch(() => {});
+  }
+}, 8000);
+
+window.addEventListener("beforeunload", () => {
+  clearInterval(beatTimer);
+  clearInterval(cleanupTimer);
+  deleteDoc(presRef).catch(() => {});
 });
 
-/* show typing users */
-onSnapshot(collection(db,"rooms",room,"typing"),snap=>{
-  let usersTyping=[];
+/* typing */
+const typingRef = doc(db, "rooms", room, "typing", user);
+let typingTimeout = null;
+let isTyping = false;
 
-  snap.forEach(d=>{
-    if(d.id !== user){
-      usersTyping.push(d.id);
-    }
-  });
-
-  if(usersTyping.length===0){
-    typingUI.innerText="";
-  } else if(usersTyping.length===1){
-    typingUI.innerText=`${usersTyping[0]} is typing...`;
+async function startTyping(){
+  if (!isTyping) {
+    isTyping = true;
+    await setDoc(typingRef, {
+      user,
+      room,
+      typing: true,
+      lastSeen: Date.now()
+    }, { merge: true });
   } else {
-    typingUI.innerText=`${usersTyping.length} people are typing...`;
+    await updateDoc(typingRef, {
+      lastSeen: Date.now(),
+      typing: true
+    }).catch(async () => {
+      await setDoc(typingRef, {
+        user,
+        room,
+        typing: true,
+        lastSeen: Date.now()
+      }, { merge: true });
+    });
+  }
+
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(async () => {
+    isTyping = false;
+    await deleteDoc(typingRef).catch(() => {});
+  }, 1500);
+}
+
+msgInput.addEventListener("input", () => {
+  const value = msgInput.value.trim();
+  if (value) startTyping().catch(() => {});
+  else {
+    clearTimeout(typingTimeout);
+    isTyping = false;
+    deleteDoc(typingRef).catch(() => {});
   }
 });
 
-/* online users */
-onSnapshot(collection(db,"rooms",room,"presence"),snap=>{
-  let users=[];
-  snap.forEach(d=>users.push(d.id));
-  info.innerText=`${room} • ${users.length} online`;
+/* listeners */
+onSnapshot(collection(db, "rooms", room, "presence"), snap => {
+  const now = Date.now();
+  const active = [];
+  const members = [];
+
+  snap.forEach(d => {
+    const data = d.data() || {};
+    const lastSeen = Number(data.lastSeen || 0);
+    const online = now - lastSeen < 10000;
+    if (online) active.push(d.id);
+    if (online) members.push({ id: d.id, lastSeen });
+  });
+
+  info.innerText = `${room} • ${active.length} online`;
+
+  members.sort((a, b) => b.lastSeen - a.lastSeen);
+  membersList.innerHTML = "";
+
+  if (members.length === 0) {
+    membersList.innerHTML = '<div class="emptyState">No one active right now.</div>';
+  } else {
+    members.forEach(m => {
+      const row = document.createElement("div");
+      row.className = "member";
+      row.innerHTML = `
+        <div class="memberLeft">
+          <div class="dot"></div>
+          <div class="memberName"></div>
+        </div>
+        <div class="badge">Active</div>
+      `;
+      row.querySelector(".memberName").textContent = m.id;
+      membersList.appendChild(row);
+    });
+  }
+
+  membersSub.textContent = `${active.length} people active in this room right now.`;
 });
 
-/* send message */
-const messagesRef=collection(db,"rooms",room,"messages");
+onSnapshot(collection(db, "rooms", room, "typing"), snap => {
+  const others = [];
+  const now = Date.now();
+
+  snap.forEach(d => {
+    if (d.id === user) return;
+    const data = d.data() || {};
+    const lastSeen = Number(data.lastSeen || 0);
+    if (now - lastSeen < 2500) others.push(d.id);
+  });
+
+  if (!others.length) typingUI.textContent = "";
+  else if (others.length === 1) typingUI.textContent = `${others[0]} is typing...`;
+  else typingUI.textContent = `${others.length} people are typing...`;
+});
+
+/* sending */
+const messagesRef = collection(db, "rooms", room, "messages");
 
 async function send(){
-  const text=msgInput.value.trim();
-  if(!text)return;
+  const text = msgInput.value.trim();
+  if (!text) return;
 
-  await addDoc(messagesRef,{
+  await addDoc(messagesRef, {
     user,
     text,
-    time:Date.now(),
-    seenBy:[user]
+    time: Date.now(),
+    seenBy: [user],
+    reactions: {
+      "👍": [],
+      "❤️": [],
+      "🔥": []
+    }
   });
 
-  msgInput.value="";
-
-  // stop typing immediately after send
-  await deleteDoc(typingRef);
+  msgInput.value = "";
+  isTyping = false;
+  clearTimeout(typingTimeout);
+  deleteDoc(typingRef).catch(() => {});
+  msgInput.focus();
 }
 
-document.getElementById("sendBtn").onclick=send;
-
-msgInput.addEventListener("keypress",e=>{
-  if(e.key==="Enter")send();
+document.getElementById("sendBtn").onclick = send;
+msgInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") send();
 });
 
-/* messages */
-onSnapshot(query(messagesRef,orderBy("time")),snap=>{
-  chat.innerHTML="";
+function toggleReaction(messageId, data, emoji){
+  const r = data.reactions || {};
+  const arr = Array.isArray(r[emoji]) ? r[emoji] : [];
+  const next = arr.includes(user) ? arr.filter(x => x !== user) : [...arr, user];
+  updateDoc(doc(db, "rooms", room, "messages", messageId), {
+    [`reactions.${emoji}`]: next
+  });
+}
 
-  snap.forEach(docSnap=>{
-    const m=docSnap.data();
+function renderMessage(docSnap){
+  const m = docSnap.data();
+  const div = document.createElement("div");
+  div.className = `msg ${m.user === user ? "me" : "other"}`;
 
-    const div=document.createElement("div");
-    div.className="msg "+(m.user===user?"me":"other");
+  const [c1, c2] = grad(m.user || "");
+  const name = document.createElement("div");
+  name.className = "name";
+  name.style.background = `linear-gradient(45deg, ${c1}, ${c2})`;
+  name.style.webkitBackgroundClip = "text";
+  name.style.webkitTextFillColor = "transparent";
+  name.textContent = m.user || "Unknown";
 
-    div.innerHTML=`
-      <div class="bubble">
-        <b>${m.user}</b><br>
-        ${m.text}
-        <div class="meta">
-          ${new Date(m.time).toLocaleTimeString()}
-        </div>
-      </div>
-    `;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
 
-    chat.appendChild(div);
+  const text = document.createElement("div");
+  text.className = "text";
+  text.textContent = escapeText(m.text);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = new Date(m.time || Date.now()).toLocaleTimeString();
+
+  const reactions = document.createElement("div");
+  reactions.className = "reactions";
+
+  ["👍", "❤️", "🔥"].forEach(emoji => {
+    const users = Array.isArray(m.reactions?.[emoji]) ? m.reactions[emoji] : [];
+    const btn = document.createElement("span");
+    btn.className = "reactBtn" + (users.includes(user) ? " active" : "");
+    btn.textContent = `${emoji} ${users.length || ""}`.trim();
+    btn.title = "React";
+    btn.onclick = () => toggleReaction(docSnap.id, m, emoji);
+    reactions.appendChild(btn);
   });
 
-  chat.scrollTop=chat.scrollHeight;
-});
+  bubble.appendChild(text);
+  bubble.appendChild(meta);
+  bubble.appendChild(reactions);
 
-/* theme */
-document.getElementById("theme").onclick=()=>{
-  document.body.classList.toggle("light");
-};
+  if (m.user === user) {
+    const del = document.createElement("button");
+    del.className = "deleteBtn";
+    del.textContent = "🗑";
+    del.title = "Delete message";
+    del.onclick = () => deleteDoc(doc(db, "rooms", room, "messages", docSnap.id));
+    div.appendChild(del);
+  }
+
+  div.appendChild(name);
+  div.appendChild(bubble);
+  return div;
+}
+
+onSnapshot(query(messagesRef, orderBy("time")), snap => {
+  chat.innerHTML = "";
+  snap.forEach(docSnap => {
+    chat.appendChild(renderMessage(docSnap));
+  });
+  chat.scrollTop = chat.scrollHeight;
+});
 
 /* effects */
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+let mode = effectSel.value;
 
 function resize(){
-  canvas.width=innerWidth;
-  canvas.height=innerHeight;
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
 }
 resize();
-window.onresize=resize;
+window.addEventListener("resize", resize);
 
-let mode="none";
-effect.onchange=e=>mode=e.target.value;
+effectSel.onchange = e => mode = e.target.value;
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  if(mode==="snow"){
+  if(mode === "snow"){
     for(let i=0;i<40;i++){
-      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
+      ctx.fillStyle = document.body.classList.contains("light") ? "rgba(17,24,39,.18)" : "rgba(255,255,255,.28)";
+      ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
     }
   }
 
-  if(mode==="rain"){
+  if(mode === "rain"){
     for(let i=0;i<60;i++){
-      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
+      ctx.fillStyle = document.body.classList.contains("light") ? "rgba(17,24,39,.2)" : "rgba(255,255,255,.22)";
+      ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 10);
     }
   }
 
-  if(mode==="thunder"){
-    if(Math.random()<0.02){
-      ctx.fillStyle="white";
+  if(mode === "thunder"){
+    if(Math.random() < 0.02){
+      ctx.fillStyle = "rgba(255,255,255,.15)";
       ctx.fillRect(0,0,canvas.width,canvas.height);
     }
   }
 
   requestAnimationFrame(draw);
 }
+
 draw();
 
+/* cleanup on tab hide */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    deleteDoc(typingRef).catch(() => {});
+  } else {
+    beat().catch(() => {});
+  }
+});
 </script>
 </body>
 </html>
