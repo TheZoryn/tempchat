@@ -15,6 +15,8 @@
   --border:rgba(255,255,255,.08);
   --muted:rgba(229,231,235,.7);
   --shadow:0 12px 40px rgba(0,0,0,.2);
+  --accent:#7c3aed;
+  --accent2:#22c55e;
 }
 
 body.light{
@@ -61,13 +63,14 @@ canvas{
 
 .headerLeft{
   min-width:0;
+  flex:1;
 }
 
 #info{
   font-size:12px;
-  opacity:.9;
+  opacity:.95;
   line-height:1.2;
-  font-weight:600;
+  font-weight:700;
 }
 
 #typing{
@@ -85,6 +88,8 @@ canvas{
   align-items:center;
   gap:8px;
   flex-shrink:0;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 button,select{
@@ -105,9 +110,22 @@ select{
   padding:10px 12px;
 }
 
-button:hover,select:hover{
-  filter:brightness(1.05);
+button:hover,select:hover{filter:brightness(1.05)}
+
+#coinsDisplay{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:9px 12px;
+  border-radius:14px;
+  background:linear-gradient(135deg, rgba(124,58,237,.18), rgba(34,197,94,.14));
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+  font-weight:800;
+  font-size:13px;
+  white-space:nowrap;
 }
+#coinsDisplay span{font-size:14px}
 
 #chat{
   flex:1;
@@ -217,9 +235,7 @@ button:hover,select:hover{
 }
 
 .msg:hover .deleteBtn,
-.msg:focus-within .deleteBtn{
-  opacity:1;
-}
+.msg:focus-within .deleteBtn{opacity:1}
 
 .inputBox{
   display:flex;
@@ -251,7 +267,7 @@ button:hover,select:hover{
   font-weight:700;
 }
 
-/* members panel */
+/* overlays */
 #overlay{
   position:fixed;
   inset:0;
@@ -266,11 +282,13 @@ button:hover,select:hover{
   pointer-events:auto;
 }
 
-#membersPanel{
+/* members panel */
+#membersPanel,
+#shopPanel{
   position:fixed;
   top:0;
   right:0;
-  width:min(320px, 88vw);
+  width:min(340px, 90vw);
   height:100%;
   background:var(--box);
   border-left:1px solid var(--border);
@@ -281,9 +299,10 @@ button:hover,select:hover{
   flex-direction:column;
   box-shadow:-16px 0 40px rgba(0,0,0,.18);
 }
-#membersPanel.active{transform:translateX(0)}
+#membersPanel.active,
+#shopPanel.active{transform:translateX(0)}
 
-.membersTop{
+.panelTop{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -291,23 +310,24 @@ button:hover,select:hover{
   border-bottom:1px solid var(--border);
 }
 
-.membersTop strong{
-  font-size:15px;
-}
+.panelTop strong{font-size:15px}
 
-.membersSub{
+.panelSub{
   padding:0 14px 12px;
   font-size:12px;
   color:var(--muted);
+  line-height:1.4;
 }
 
-#membersList{
+#membersList,
+#shopList{
   padding:10px 10px 14px;
   overflow:auto;
   flex:1;
 }
 
-.member{
+.member,
+.shopItem{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -319,7 +339,8 @@ button:hover,select:hover{
   margin-bottom:8px;
 }
 
-.memberLeft{
+.memberLeft,
+.shopLeft{
   display:flex;
   align-items:center;
   gap:10px;
@@ -335,7 +356,8 @@ button:hover,select:hover{
   flex-shrink:0;
 }
 
-.memberName{
+.memberName,
+.shopTitle{
   font-size:14px;
   font-weight:700;
   overflow:hidden;
@@ -343,14 +365,52 @@ button:hover,select:hover{
   white-space:nowrap;
 }
 
-.badge{
+.badge,
+.priceTag{
   font-size:10px;
   padding:4px 8px;
   border-radius:999px;
-  background:rgba(34,197,94,.14);
-  color:#22c55e;
-  border:1px solid rgba(34,197,94,.18);
+  background:rgba(124,58,237,.14);
+  color:#a78bfa;
+  border:1px solid rgba(124,58,237,.18);
   flex-shrink:0;
+  white-space:nowrap;
+}
+
+.shopMeta{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:3px;
+  line-height:1.35;
+}
+
+.buyBtn{
+  padding:8px 10px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--me), #4f46e5);
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+  flex-shrink:0;
+}
+
+.buyBtn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.activeChip{
+  margin-top:6px;
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(34,197,94,.12);
+  border:1px solid rgba(34,197,94,.16);
+  color:#22c55e;
+  font-size:10px;
+  font-weight:800;
 }
 
 .emptyState{
@@ -360,12 +420,45 @@ button:hover,select:hover{
   text-align:center;
 }
 
+/* theme unlock styles */
+body.theme-glow{
+  --me:#d946ef;
+}
+body.theme-fire{
+  --me:#f97316;
+}
+body.theme-ocean{
+  --me:#06b6d4;
+}
+body.theme-mint{
+  --me:#22c55e;
+}
+
+.msg.bubble-soft .bubble{
+  border-radius:20px;
+}
+.msg.bubble-pill .bubble{
+  border-radius:999px;
+}
+.msg.bubble-neon .bubble{
+  border:1px solid rgba(167,139,250,.4);
+  box-shadow:0 0 0 1px rgba(167,139,250,.12), 0 0 22px rgba(124,58,237,.18);
+}
+.msg.bubble-glass .bubble{
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);
+}
+body.light .msg.bubble-glass .bubble{
+  background:rgba(255,255,255,.72);
+}
+
 @media (max-width:560px){
-  .header{padding:10px 10px}
+  .header{padding:10px}
   .headerRight{gap:6px}
   button,select{padding:9px 10px}
-  .msg{max-width:86%}
+  .msg{max-width:88%}
   #sendBtn{min-width:66px}
+  #membersPanel,#shopPanel{width:min(330px, 92vw)}
 }
 </style>
 </head>
@@ -379,6 +472,8 @@ button:hover,select:hover{
     <div id="typing"></div>
   </div>
   <div class="headerRight">
+    <div id="coinsDisplay" title="Your coins"><span>🪙</span><span id="coinsCount">0</span></div>
+    <button id="shopBtn" title="Shop">🛍</button>
     <button id="copyLink" title="Copy room link">🔗</button>
     <button id="membersBtn" title="Members">👥</button>
     <select id="effect" aria-label="Background effect">
@@ -399,13 +494,23 @@ button:hover,select:hover{
 </div>
 
 <div id="overlay"></div>
+
 <div id="membersPanel" aria-hidden="true">
-  <div class="membersTop">
+  <div class="panelTop">
     <strong>Members</strong>
     <button id="closeMembers" title="Close">✖</button>
   </div>
-  <div class="membersSub" id="membersSub">People active in this room right now.</div>
+  <div class="panelSub" id="membersSub">People active in this room right now.</div>
   <div id="membersList"></div>
+</div>
+
+<div id="shopPanel" aria-hidden="true">
+  <div class="panelTop">
+    <strong>Shop</strong>
+    <button id="closeShop" title="Close">✖</button>
+  </div>
+  <div class="panelSub" id="shopCoinsInfo">Buy cosmetics with coins. Coins are earned by chatting.</div>
+  <div id="shopList"></div>
 </div>
 
 <script type="module">
@@ -421,7 +526,6 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  getDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -442,12 +546,117 @@ const chat = document.getElementById("chat");
 const msgInput = document.getElementById("msg");
 const info = document.getElementById("info");
 const typingUI = document.getElementById("typing");
+const coinsCount = document.getElementById("coinsCount");
 const membersList = document.getElementById("membersList");
 const membersSub = document.getElementById("membersSub");
+const shopList = document.getElementById("shopList");
+const shopCoinsInfo = document.getElementById("shopCoinsInfo");
 const overlay = document.getElementById("overlay");
 const membersPanel = document.getElementById("membersPanel");
+const shopPanel = document.getElementById("shopPanel");
 const themeBtn = document.getElementById("theme");
 const effectSel = document.getElementById("effect");
+
+const state = {
+  coins: 0,
+  prefs: {
+    bubble: "soft",
+    nameGlow: "none",
+    themeClass: "",
+    effect: "none"
+  },
+  ui: {
+    memberOpen: false,
+    shopOpen: false
+  },
+  typingTimer: null,
+  isTyping: false
+};
+
+const storageCoinsKey = `vibely-coins-${room}-${user}`;
+const storagePrefsKey = `vibely-prefs-${room}-${user}`;
+const storageBonusKey = `vibely-bonus-${room}-${user}`;
+
+const SHOP_ITEMS = [
+  {
+    id: "bubble-soft",
+    title: "Soft Bubbles",
+    price: 0,
+    desc: "Cleaner rounded chat bubbles."
+  },
+  {
+    id: "bubble-pill",
+    title: "Pill Bubbles",
+    price: 25,
+    desc: "Big smooth bubble style."
+  },
+  {
+    id: "bubble-neon",
+    title: "Neon Bubbles",
+    price: 45,
+    desc: "A glowing chat look."
+  },
+  {
+    id: "bubble-glass",
+    title: "Glass Bubbles",
+    price: 60,
+    desc: "Soft transparent feel."
+  },
+  {
+    id: "theme-glow",
+    title: "Glow Theme",
+    price: 40,
+    desc: "Pink-violet send color."
+  },
+  {
+    id: "theme-fire",
+    title: "Fire Theme",
+    price: 50,
+    desc: "Warm fire-orange send color."
+  },
+  {
+    id: "theme-ocean",
+    title: "Ocean Theme",
+    price: 50,
+    desc: "Fresh cyan send color."
+  },
+  {
+    id: "theme-mint",
+    title: "Mint Theme",
+    price: 50,
+    desc: "Green fresh send color."
+  },
+  {
+    id: "name-rainbow",
+    title: "Rainbow Name",
+    price: 35,
+    desc: "Your name gets a rainbow glow."
+  },
+  {
+    id: "name-gold",
+    title: "Gold Name",
+    price: 55,
+    desc: "Premium gold name style."
+  },
+  {
+    id: "effect-rain",
+    title: "Rain Effect",
+    price: 15,
+    desc: "Unlock rainy background."
+  },
+  {
+    id: "effect-snow",
+    title: "Snow Effect",
+    price: 15,
+    desc: "Unlock snowy background."
+  },
+  {
+    id: "effect-thunder",
+    title: "Thunder Effect",
+    price: 20,
+    desc: "Unlock thunder flash background."
+  }
+];
 
 function grad(name){
   const g = [
@@ -460,30 +669,96 @@ function grad(name){
   return g[name.length % g.length];
 }
 
-function escapeText(value){
-  return String(value ?? "");
+function esc(v){
+  return String(v ?? "");
 }
 
-function openMembers(){
-  membersPanel.classList.add("active");
+function setCoinBalance(v){
+  state.coins = Math.max(0, Math.floor(Number(v) || 0));
+  coinsCount.textContent = String(state.coins);
+  localStorage.setItem(storageCoinsKey, String(state.coins));
+}
+
+function addCoins(amount){
+  setCoinBalance(state.coins + amount);
+}
+
+function savePrefs(){
+  localStorage.setItem(storagePrefsKey, JSON.stringify(state.prefs));
+}
+
+function loadPrefs(){
+  try {
+    const raw = localStorage.getItem(storagePrefsKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        state.prefs = {
+          ...state.prefs,
+          ...parsed
+        };
+      }
+    }
+  } catch {}
+}
+
+function applyPrefs(){
+  document.body.classList.remove("theme-glow", "theme-fire", "theme-ocean", "theme-mint");
+  if (state.prefs.themeClass) document.body.classList.add(state.prefs.themeClass);
+
+  document.querySelectorAll(".msg").forEach(node => {
+    node.classList.remove("bubble-soft", "bubble-pill", "bubble-neon", "bubble-glass");
+    node.classList.add(`bubble-${state.prefs.bubble}`);
+  });
+
+  effectSel.value = state.prefs.effect || effectSel.value || "none";
+  mode = effectSel.value;
+}
+
+function openPanel(which){
+  if (which === "members") {
+    membersPanel.classList.add("active");
+    membersPanel.setAttribute("aria-hidden", "false");
+    state.ui.memberOpen = true;
+  }
+  if (which === "shop") {
+    shopPanel.classList.add("active");
+    shopPanel.setAttribute("aria-hidden", "false");
+    state.ui.shopOpen = true;
+  }
   overlay.classList.add("active");
-  membersPanel.setAttribute("aria-hidden", "false");
 }
 
-function closeMembers(){
+function closePanels(){
   membersPanel.classList.remove("active");
-  overlay.classList.remove("active");
+  shopPanel.classList.remove("active");
   membersPanel.setAttribute("aria-hidden", "true");
+  shopPanel.setAttribute("aria-hidden", "true");
+  overlay.classList.remove("active");
+  state.ui.memberOpen = false;
+  state.ui.shopOpen = false;
 }
 
-document.getElementById("membersBtn").onclick = openMembers;
-document.getElementById("closeMembers").onclick = closeMembers;
-overlay.onclick = closeMembers;
+function refreshOverlay(){
+  if (state.ui.memberOpen || state.ui.shopOpen) overlay.classList.add("active");
+  else overlay.classList.remove("active");
+}
+
+loadPrefs();
+setCoinBalance(Number(localStorage.getItem(storageCoinsKey) || 0));
+applyPrefs();
+
+/* controls */
+document.getElementById("membersBtn").onclick = () => openPanel("members");
+document.getElementById("shopBtn").onclick = () => openPanel("shop");
+document.getElementById("closeMembers").onclick = closePanels;
+document.getElementById("closeShop").onclick = closePanels;
+overlay.onclick = closePanels;
 
 /* theme */
 function getPreferredTheme(){
   const saved = localStorage.getItem("theme");
-  if(saved === "light" || saved === "dark") return saved;
+  if (saved === "light" || saved === "dark") return saved;
   return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 function applyTheme(theme){
@@ -499,8 +774,10 @@ applyTheme(getPreferredTheme());
 document.getElementById("copyLink").onclick = async () => {
   try {
     await navigator.clipboard.writeText(location.href);
-    document.getElementById("copyLink").textContent = "✓";
-    setTimeout(() => (document.getElementById("copyLink").textContent = "🔗"), 900);
+    const el = document.getElementById("copyLink");
+    const prev = el.textContent;
+    el.textContent = "✓";
+    setTimeout(() => (el.textContent = prev), 900);
   } catch {
     alert("Copy failed");
   }
@@ -508,47 +785,39 @@ document.getElementById("copyLink").onclick = async () => {
 
 /* presence: active only */
 const presRef = doc(db, "rooms", room, "presence", user);
-let lastBeat = Date.now();
-let beatTimer = null;
 let heartbeatTimer = null;
-let cleanupTimer = null;
+let visibilityTimer = null;
 
 async function beat(){
-  lastBeat = Date.now();
   await setDoc(presRef, {
     user,
-    lastSeen: lastBeat,
+    lastSeen: Date.now(),
     room,
     active: true
   }, { merge: true });
 }
 
 await beat();
-beatTimer = setInterval(() => {
+heartbeatTimer = setInterval(() => {
   beat().catch(() => {});
-}, 5000);
+}, 3000);
 
-cleanupTimer = setInterval(async () => {
-  // keep online count based on recent activity; if tab is gone, user drops off after timeout
-  if (document.visibilityState === "visible") {
-    await beat().catch(() => {});
-  }
+visibilityTimer = setInterval(() => {
+  if (document.visibilityState === "visible") beat().catch(() => {});
 }, 8000);
 
 window.addEventListener("beforeunload", () => {
-  clearInterval(beatTimer);
-  clearInterval(cleanupTimer);
+  clearInterval(heartbeatTimer);
+  clearInterval(visibilityTimer);
   deleteDoc(presRef).catch(() => {});
+  deleteDoc(doc(db, "rooms", room, "typing", user)).catch(() => {});
 });
 
 /* typing */
 const typingRef = doc(db, "rooms", room, "typing", user);
-let typingTimeout = null;
-let isTyping = false;
-
-async function startTyping(){
-  if (!isTyping) {
-    isTyping = true;
+async function setTyping(on){
+  if (on) {
+    state.isTyping = true;
     await setDoc(typingRef, {
       user,
       room,
@@ -556,34 +825,24 @@ async function startTyping(){
       lastSeen: Date.now()
     }, { merge: true });
   } else {
-    await updateDoc(typingRef, {
-      lastSeen: Date.now(),
-      typing: true
-    }).catch(async () => {
-      await setDoc(typingRef, {
-        user,
-        room,
-        typing: true,
-        lastSeen: Date.now()
-      }, { merge: true });
-    });
-  }
-
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(async () => {
-    isTyping = false;
+    state.isTyping = false;
     await deleteDoc(typingRef).catch(() => {});
-  }, 1500);
+  }
 }
 
 msgInput.addEventListener("input", () => {
   const value = msgInput.value.trim();
-  if (value) startTyping().catch(() => {});
-  else {
-    clearTimeout(typingTimeout);
-    isTyping = false;
-    deleteDoc(typingRef).catch(() => {});
+  if (!value) {
+    clearTimeout(state.typingTimer);
+    setTyping(false).catch(() => {});
+    return;
   }
+
+  clearTimeout(state.typingTimer);
+  setTyping(true).catch(() => {});
+  state.typingTimer = setTimeout(() => {
+    setTyping(false).catch(() => {});
+  }, 1500);
 });
 
 /* listeners */
@@ -595,9 +854,11 @@ onSnapshot(collection(db, "rooms", room, "presence"), snap => {
   snap.forEach(d => {
     const data = d.data() || {};
     const lastSeen = Number(data.lastSeen || 0);
-    const online = now - lastSeen < 10000;
-    if (online) active.push(d.id);
-    if (online) members.push({ id: d.id, lastSeen });
+    const online = now - lastSeen < 7000;
+    if (online) {
+      active.push(d.id);
+      members.push({ id: d.id, lastSeen });
+    }
   });
 
   info.innerText = `${room} • ${active.length} online`;
@@ -642,13 +903,130 @@ onSnapshot(collection(db, "rooms", room, "typing"), snap => {
   else typingUI.textContent = `${others.length} people are typing...`;
 });
 
-/* sending */
+/* shop rendering */
+function getUnlocked(){
+  try {
+    return JSON.parse(localStorage.getItem(`vibely-unlocked-${room}-${user}`) || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveUnlocked(obj){
+  localStorage.setItem(`vibely-unlocked-${room}-${user}`, JSON.stringify(obj));
+}
+function unlock(itemId){
+  const unlocked = getUnlocked();
+  unlocked[itemId] = true;
+  saveUnlocked(unlocked);
+}
+function isUnlocked(itemId){
+  if (itemId === "bubble-soft") return true;
+  return !!getUnlocked()[itemId];
+}
+function activateItem(itemId){
+  if (itemId.startsWith("bubble-")) {
+    state.prefs.bubble = itemId.replace("bubble-", "");
+  }
+  if (itemId.startsWith("theme-")) {
+    state.prefs.themeClass = itemId;
+  }
+  if (itemId.startsWith("effect-")) {
+    state.prefs.effect = itemId.replace("effect-", "");
+    effectSel.value = state.prefs.effect;
+    mode = state.prefs.effect;
+  }
+  if (itemId === "name-rainbow") {
+    state.prefs.nameGlow = "rainbow";
+  }
+  if (itemId === "name-gold") {
+    state.prefs.nameGlow = "gold";
+  }
+  savePrefs();
+  applyPrefs();
+  renderMessagesFromDom();
+}
+function buyItem(item){
+  const unlocked = getUnlocked();
+  if (isUnlocked(item.id)) {
+    activateItem(item.id);
+    return;
+  }
+  if (state.coins < item.price) {
+    alert(`Need ${item.price} coins.`);
+    return;
+  }
+  setCoinBalance(state.coins - item.price);
+  unlocked[item.id] = true;
+  saveUnlocked(unlocked);
+  activateItem(item.id);
+  renderShop();
+}
+
+function shopItemMarkup(item){
+  const owned = isUnlocked(item.id);
+  const active =
+    (item.id.startsWith("bubble-") && state.prefs.bubble === item.id.replace("bubble-", "")) ||
+    (item.id.startsWith("theme-") && state.prefs.themeClass === item.id) ||
+    (item.id.startsWith("effect-") && state.prefs.effect === item.id.replace("effect-", "")) ||
+    (item.id === "name-rainbow" && state.prefs.nameGlow === "rainbow") ||
+    (item.id === "name-gold" && state.prefs.nameGlow === "gold");
+
+  const actionText = active ? "Equipped" : owned ? "Use" : `Buy ${item.price}`;
+  const disabled = false;
+
+  return `
+    <div class="shopItem">
+      <div class="shopLeft">
+        <div class="dot" style="background:${owned ? '#22c55e' : '#a78bfa'}; box-shadow:${owned ? '0 0 0 4px rgba(34,197,94,.12)' : '0 0 0 4px rgba(167,139,250,.12)'}"></div>
+        <div style="min-width:0">
+          <div class="shopTitle">${item.title}</div>
+          <div class="shopMeta">${item.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <div class="priceTag">🪙 ${item.price}</div>
+        <button class="buyBtn" data-shop="${item.id}" ${disabled ? 'disabled' : ''}>${actionText}</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderShop(){
+  shopCoinsInfo.textContent = `Coins: ${state.coins}. Send messages to earn more.`;
+  shopList.innerHTML = SHOP_ITEMS.map(shopItemMarkup).join("");
+  shopList.querySelectorAll("[data-shop]").forEach(btn => {
+    btn.onclick = () => {
+      const item = SHOP_ITEMS.find(x => x.id === btn.dataset.shop);
+      if (item) buyItem(item);
+    };
+  });
+}
+
+function renderNameStyled(name){
+  const safe = esc(name || "Unknown");
+  if (state.prefs.nameGlow === "rainbow") return `<span style="background:linear-gradient(90deg,#ff4d6d,#ffbd59,#7bffb2,#5ed3ff,#c77dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;
+  if (state.prefs.nameGlow === "gold") return `<span style="background:linear-gradient(90deg,#fbbf24,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;
+  const [c1,c2] = grad(name || "");
+  return `<span style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;
+}
+
+/* messages */
 const messagesRef = collection(db, "rooms", room, "messages");
+
+async function awardDailyBonus(){
+  const key = `${storageBonusKey}-${new Date().toDateString()}`;
+  if (!localStorage.getItem(key)) {
+    setCoinBalance(state.coins + 5);
+    localStorage.setItem(key, "1");
+  }
+}
+await awardDailyBonus();
 
 async function send(){
   const text = msgInput.value.trim();
   if (!text) return;
 
+  const coinsBefore = state.coins;
   await addDoc(messagesRef, {
     user,
     text,
@@ -661,10 +1039,9 @@ async function send(){
     }
   });
 
+  addCoins(2);
   msgInput.value = "";
-  isTyping = false;
-  clearTimeout(typingTimeout);
-  deleteDoc(typingRef).catch(() => {});
+  await setTyping(false).catch(() => {});
   msgInput.focus();
 }
 
@@ -682,25 +1059,22 @@ function toggleReaction(messageId, data, emoji){
   });
 }
 
-function renderMessage(docSnap){
+function messageElement(docSnap){
   const m = docSnap.data();
   const div = document.createElement("div");
   div.className = `msg ${m.user === user ? "me" : "other"}`;
+  div.classList.add(`bubble-${state.prefs.bubble}`);
 
-  const [c1, c2] = grad(m.user || "");
   const name = document.createElement("div");
   name.className = "name";
-  name.style.background = `linear-gradient(45deg, ${c1}, ${c2})`;
-  name.style.webkitBackgroundClip = "text";
-  name.style.webkitTextFillColor = "transparent";
-  name.textContent = m.user || "Unknown";
+  name.innerHTML = renderNameStyled(m.user || "Unknown");
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
 
   const text = document.createElement("div");
   text.className = "text";
-  text.textContent = escapeText(m.text);
+  text.textContent = esc(m.text);
 
   const meta = document.createElement("div");
   meta.className = "meta";
@@ -713,9 +1087,11 @@ function renderMessage(docSnap){
     const users = Array.isArray(m.reactions?.[emoji]) ? m.reactions[emoji] : [];
     const btn = document.createElement("span");
     btn.className = "reactBtn" + (users.includes(user) ? " active" : "");
-    btn.textContent = `${emoji} ${users.length || ""}`.trim();
-    btn.title = "React";
-    btn.onclick = () => toggleReaction(docSnap.id, m, emoji);
+    btn.textContent = `${emoji}${users.length ? ` ${users.length}` : ""}`;
+    btn.onclick = () => {
+      toggleReaction(docSnap.id, m, emoji);
+      addCoins(1);
+    };
     reactions.appendChild(btn);
   });
 
@@ -737,18 +1113,30 @@ function renderMessage(docSnap){
   return div;
 }
 
-onSnapshot(query(messagesRef, orderBy("time")), snap => {
-  chat.innerHTML = "";
-  snap.forEach(docSnap => {
-    chat.appendChild(renderMessage(docSnap));
+function renderMessagesFromDom(){
+  document.querySelectorAll(".msg").forEach(node => {
+    node.classList.remove("bubble-soft", "bubble-pill", "bubble-neon", "bubble-glass");
+    node.classList.add(`bubble-${state.prefs.bubble}`);
   });
-  chat.scrollTop = chat.scrollHeight;
+}
+
+onSnapshot(query(messagesRef, orderBy("time")), snap => {
+  const isAtBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
+  chat.innerHTML = "";
+  snap.forEach(docSnap => chat.appendChild(messageElement(docSnap)));
+  if (isAtBottom) chat.scrollTop = chat.scrollHeight;
 });
 
 /* effects */
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
-let mode = effectSel.value;
+let mode = effectSel.value || "none";
+
+authorityEffectSync();
+function authorityEffectSync(){
+  mode = state.prefs.effect || effectSel.value || "none";
+  effectSel.value = mode;
+}
 
 function resize(){
   canvas.width = innerWidth;
@@ -757,21 +1145,26 @@ function resize(){
 resize();
 window.addEventListener("resize", resize);
 
-effectSel.onchange = e => mode = e.target.value;
+effectSel.onchange = e => {
+  mode = e.target.value;
+  state.prefs.effect = mode;
+  savePrefs();
+};
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  const isLight = document.body.classList.contains("light");
 
   if(mode === "snow"){
     for(let i=0;i<40;i++){
-      ctx.fillStyle = document.body.classList.contains("light") ? "rgba(17,24,39,.18)" : "rgba(255,255,255,.28)";
+      ctx.fillStyle = isLight ? "rgba(17,24,39,.18)" : "rgba(255,255,255,.28)";
       ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
     }
   }
 
   if(mode === "rain"){
     for(let i=0;i<60;i++){
-      ctx.fillStyle = document.body.classList.contains("light") ? "rgba(17,24,39,.2)" : "rgba(255,255,255,.22)";
+      ctx.fillStyle = isLight ? "rgba(17,24,39,.2)" : "rgba(255,255,255,.22)";
       ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 10);
     }
   }
@@ -785,16 +1178,30 @@ function draw(){
 
   requestAnimationFrame(draw);
 }
-
 draw();
 
-/* cleanup on tab hide */
+/* cleanup on hide */
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     deleteDoc(typingRef).catch(() => {});
+    deleteDoc(presRef).catch(() => {});
   } else {
     beat().catch(() => {});
   }
+});
+
+/* reapply prefs after render changes */
+setInterval(() => {
+  applyPrefs();
+}, 1000);
+
+/* preload shop/open state sync */
+renderShop();
+refreshOverlay();
+
+/* keyboard shortcut to close panels */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closePanels();
 });
 </script>
 </body>
