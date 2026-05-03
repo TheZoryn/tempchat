@@ -21,16 +21,27 @@ body.light{
   --muted:rgba(17,24,39,.65);
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  display:flex;
+}
 
-/* SIDEBAR */
 #side{
-  width:240px;
+  width:220px;
   border-right:1px solid var(--border);
   padding:10px;
   overflow:auto;
 }
-#chatWrap{flex:1;display:flex;flex-direction:column}
+
+#chatWrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
 
 .header{
   display:flex;
@@ -38,10 +49,25 @@ body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);displ
   padding:10px;
   border-bottom:1px solid var(--border);
 }
-#info{font-size:12px;font-weight:700}
-#coins{font-size:12px;opacity:.8}
 
-#chat{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+#info{
+  font-size:12px;
+  font-weight:700;
+}
+
+#coins{
+  font-size:12px;
+  opacity:.8;
+}
+
+#chat{
+  flex:1;
+  overflow:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 
 .msg{max-width:75%}
 .me{align-self:flex-end;text-align:right}
@@ -52,25 +78,76 @@ body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);displ
   border-radius:14px;
   background:var(--box);
   border:1px solid var(--border);
+  word-break:break-word;
 }
-.me .bubble{background:var(--me);color:white}
 
-.meta{font-size:10px;opacity:.7;margin-top:4px}
+.me .bubble{
+  background:var(--me);
+  color:white;
+}
 
-.actions{display:flex;gap:6px;margin-top:4px}
-.btnSmall{font-size:10px;padding:4px 6px;border:none;border-radius:8px;cursor:pointer}
+.meta{
+  font-size:10px;
+  opacity:.7;
+  margin-top:4px;
+}
 
-.inputBox{display:flex;gap:6px;padding:10px;border-top:1px solid var(--border)}
-input{flex:1;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--box);color:var(--text)}
-button{border:none;border-radius:12px;padding:10px;cursor:pointer}
-#sendBtn{background:var(--me);color:white}
+.actions{
+  display:flex;
+  gap:6px;
+  margin-top:5px;
+}
 
-/* emoji bar */
-#emojiBar{display:flex;gap:6px;padding:6px 10px;border-top:1px solid var(--border)}
+.btnSmall{
+  font-size:10px;
+  padding:4px 6px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.inputBox{
+  display:flex;
+  gap:6px;
+  padding:10px;
+  border-top:1px solid var(--border);
+}
+
+input{
+  flex:1;
+  padding:10px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--box);
+  color:var(--text);
+}
+
+button{
+  border:none;
+  border-radius:12px;
+  padding:10px;
+  cursor:pointer;
+}
+
+#sendBtn{
+  background:var(--me);
+  color:white;
+}
+
+#emojiBar{
+  display:flex;
+  gap:8px;
+  padding:6px 10px;
+  border-top:1px solid var(--border);
+}
+
 .emoji{cursor:pointer}
 
-/* members */
-.member{font-size:12px;padding:6px;border-bottom:1px solid var(--border)}
+.member{
+  font-size:12px;
+  padding:6px;
+  border-bottom:1px solid var(--border);
+}
 
 </style>
 </head>
@@ -85,7 +162,7 @@ button{border:none;border-radius:12px;padding:10px;cursor:pointer}
 
   <div class="header">
     <div>
-      <div id="info">room</div>
+      <div id="info"></div>
       <div id="coins">coins: 0</div>
     </div>
     <button id="themeBtn">🌙</button>
@@ -127,6 +204,7 @@ const chat = document.getElementById("chat");
 const msg = document.getElementById("msg");
 const members = document.getElementById("members");
 const coinsUI = document.getElementById("coins");
+const sendBtn = document.getElementById("sendBtn");
 
 let coins = Number(localStorage.getItem("coins") || 0);
 coinsUI.innerText = "coins: " + coins;
@@ -166,10 +244,13 @@ async function send(){
 }
 
 sendBtn.onclick=send;
+msg.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
+});
 
-/* emoji insert */
+/* emoji */
 document.querySelectorAll(".emoji").forEach(e=>{
-  e.onclick=()=>msg.value += e.textContent;
+  e.onclick=()=>msg.value+=e.textContent;
 });
 
 /* messages */
@@ -194,15 +275,15 @@ onSnapshot(query(ref,orderBy("time")),snap=>{
       </div>
     `;
 
-    div.querySelector(".del")?.addEventListener("click",()=>{
+    div.querySelector(".del")?.onclick=()=>{
       deleteDoc(doc(db,"rooms",room,"messages",d.id));
-    });
+    };
 
-    div.querySelector("button")?.addEventListener("click",()=>{
-      const arr = m.likes || [];
+    div.querySelector("button")?.onclick=()=>{
+      const arr=m.likes||[];
       if(!arr.includes(user)) arr.push(user);
       setDoc(doc(db,"rooms",room,"messages",d.id),{likes:arr},{merge:true});
-    });
+    };
 
     chat.appendChild(div);
   });
@@ -211,6 +292,5 @@ onSnapshot(query(ref,orderBy("time")),snap=>{
 });
 
 </script>
-
 </body>
 </html>
