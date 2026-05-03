@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Vibely Chat</title>
-
 <style>
 :root{
   --bg:#0f172a;
@@ -38,9 +37,16 @@ body{
 }
 canvas{position:fixed;inset:0;z-index:-1;pointer-events:none}
 .header{
-  display:flex;justify-content:space-between;align-items:center;gap:10px;
-  padding:10px 12px;background:rgba(0,0,0,.04);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);box-shadow:var(--shadow);z-index:20;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  background:rgba(0,0,0,.04);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow);
+  z-index:20;
 }
 .headerLeft{min-width:0;flex:1}
 #info{font-size:12px;opacity:.95;line-height:1.2;font-weight:700}
@@ -168,172 +174,240 @@ body.light .msg.bubble-glass .bubble{background:rgba(255,255,255,.72)}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig={apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",authDomain:"temp-chat-6f08b.firebaseapp.com",projectId:"temp-chat-6f08b"};
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+const firebaseConfig = { apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w", authDomain:"temp-chat-6f08b.firebaseapp.com", projectId:"temp-chat-6f08b" };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-const params=new URLSearchParams(location.search);
-const room=params.get("room") || "room";
-let user=params.get("user") || localStorage.getItem("vibely-username") || "";
-if(!user){ user=prompt("Choose your username")?.trim() || "Guest"; }
+const params = new URLSearchParams(location.search);
+const room = params.get("room") || "room";
+let user = params.get("user") || localStorage.getItem("vibely-username") || "";
+if (!user) user = prompt("Choose your username")?.trim() || "Guest";
 localStorage.setItem("vibely-username", user);
 
-const userKey=user.toLowerCase().replace(/[^a-z0-9]+/g,"_") || "guest";
-const STORAGE={
-  coins:`vibely-coins-${userKey}`,
-  prefs:`vibely-prefs-${userKey}`,
-  unlocks:`vibely-unlocks-${userKey}`,
-  history:`vibely-history-${userKey}`,
-  daily:`vibely-daily-${userKey}`
+const userKey = user.toLowerCase().replace(/[^a-z0-9]+/g, "_") || "guest";
+const STORAGE = {
+  coins: `vibely-coins-${userKey}`,
+  prefs: `vibely-prefs-${userKey}`,
+  unlocks: `vibely-unlocks-${userKey}`,
+  history: `vibely-history-${userKey}`,
+  daily: `vibely-daily-${userKey}`
 };
 
-const chat=document.getElementById("chat");
-const msgInput=document.getElementById("msg");
-const info=document.getElementById("info");
-const typingUI=document.getElementById("typing");
-const coinsCount=document.getElementById("coinsCount");
-const membersList=document.getElementById("membersList");
-const membersSub=document.getElementById("membersSub");
-const shopList=document.getElementById("shopList");
-const shopCoinsInfo=document.getElementById("shopCoinsInfo");
-const emojiList=document.getElementById("emojiList");
+const chat = document.getElementById("chat");
+const msgInput = document.getElementById("msg");
+const info = document.getElementById("info");
+const typingUI = document.getElementById("typing");
+const coinsCount = document.getElementById("coinsCount");
+const membersList = document.getElementById("membersList");
+const membersSub = document.getElementById("membersSub");
+const shopList = document.getElementById("shopList");
+const shopCoinsInfo = document.getElementById("shopCoinsInfo");
+const emojiList = document.getElementById("emojiList");
+const overlay = document.getElementById("overlay");
+const emojiOverlay = document.getElementById("emojiOverlay");
+const membersPanel = document.getElementById("membersPanel");
+const shopPanel = document.getElementById("shopPanel");
+const emojiPanel = document.getElementById("emojiPanel");
+const themeBtn = document.getElementById("theme");
+const effectSel = document.getElementById("effect");
+const shopBtn = document.getElementById("shopBtn");
+const emojiBtn = document.getElementById("emojiBtn");
+const membersBtn = document.getElementById("membersBtn");
+const copyBtn = document.getElementById("copyLink");
+const closeMembers = document.getElementById("closeMembers");
+const closeShop = document.getElementById("closeShop");
+const closeEmoji = document.getElementById("closeEmoji");
+const sendBtn = document.getElementById("sendBtn");
+
+const state = { coins:0, prefs:{ bubble:"soft", nameGlow:"none", themeClass:"", effect:"none" }, typingTimer:null };
+const SHOP = [
+  { id:"bubble-soft", title:"Soft Bubbles", price:0, desc:"Cleaner rounded chat bubbles." },
+  { id:"bubble-pill", title:"Pill Bubbles", price:25, desc:"Big smooth bubble style." },
+  { id:"bubble-neon", title:"Neon Bubbles", price:45, desc:"A glowing chat look." },
+  { id:"bubble-glass", title:"Glass Bubbles", price:60, desc:"Soft transparent feel." },
+  { id:"theme-glow", title:"Glow Theme", price:40, desc:"Pink-violet send color." },
+  { id:"theme-fire", title:"Fire Theme", price:50, desc:"Warm fire-orange send color." },
+  { id:"theme-ocean", title:"Ocean Theme", price:50, desc:"Fresh cyan send color." },
+  { id:"theme-mint", title:"Mint Theme", price:50, desc:"Green fresh send color." },
+  { id:"theme-gold", title:"Gold Theme", price:65, desc:"Premium gold send color." },
+  { id:"name-rainbow", title:"Rainbow Name", price:35, desc:"Your name gets a rainbow glow." },
+  { id:"name-gold", title:"Gold Name", price:55, desc:"Premium gold name style." },
+  { id:"effect-rain", title:"Rain Effect", price:15, desc:"Unlock rainy background." },
+  { id:"effect-snow", title:"Snow Effect", price:15, desc:"Unlock snowy background." },
+  { id:"effect-thunder", title:"Thunder Effect", price:20, desc:"Unlock thunder flash background." }
+];
+const EMOJIS = ["😂","🔥","❤️","👍","😭","😎","😳","💯","✨","🤝","💀","😍"];
+
+function grad(name){ const g=[["#ff7eb3","#ff758c"],["#7afcff","#00c6ff"],["#fbc2eb","#a6c1ee"],["#fddb92","#d1fdff"],["#84fab0","#8fd3f4"]]; return g[name.length % g.length]; }
+function esc(v){ return String(v ?? ""); }
+function loadJSON(key, fallback){ try{ const raw=localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } }
+function saveJSON(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+function saveHistory(entry){ const h = loadJSON(STORAGE.history, []); h.unshift({ time: Date.now(), ...entry }); saveJSON(STORAGE.history, h.slice(0,100)); }
+function setCoins(v){ state.coins = Math.max(0, Math.floor(Number(v) || 0)); coinsCount.textContent = String(state.coins); localStorage.setItem(STORAGE.coins, String(state.coins)); }
+function addCoins(v, reason="activity"){ if (!v) return; setCoins(state.coins + v); saveHistory({ type:"coins", amount:v, reason, room }); }
+function loadPrefs(){ const p = loadJSON(STORAGE.prefs, null); if (p && typeof p === "object") state.prefs = { ...state.prefs, ...p }; }
+function savePrefs(){ saveJSON(STORAGE.prefs, state.prefs); }
+function loadUnlocks(){ return loadJSON(STORAGE.unlocks, { "bubble-soft": true }); }
+function saveUnlocks(u){ saveJSON(STORAGE.unlocks, u); }
+function isUnlocked(id){ return !!loadUnlocks()[id]; }
+function unlock(id){ const u = loadUnlocks(); u[id] = true; saveUnlocks(u); }
+function renderName(name){ const safe = esc(name || "Unknown"); if (state.prefs.nameGlow === "rainbow") return `<span style="background:linear-gradient(90deg,#ff4d6d,#ffbd59,#7bffb2,#5ed3ff,#c77dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`; if (state.prefs.nameGlow === "gold") return `<span style="background:linear-gradient(90deg,#fbbf24,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`; const [c1,c2]=grad(name||""); return `<span style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`; }
+function applyTheme(theme){ document.body.classList.toggle("light", theme === "light"); themeBtn.textContent = theme === "light" ? "☀" : "🌙"; document.documentElement.style.colorScheme = theme; localStorage.setItem("theme", theme); }
+function getTheme(){ const s = localStorage.getItem("theme"); if (s === "light" || s === "dark") return s; return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"; }
+function applyPrefs(){ document.body.classList.remove("theme-glow","theme-fire","theme-ocean","theme-mint","theme-gold"); if (state.prefs.themeClass) document.body.classList.add(state.prefs.themeClass); effectSel.value = state.prefs.effect || "none"; mode = effectSel.value; document.querySelectorAll(".msg").forEach(n => { n.classList.remove("bubble-soft","bubble-pill","bubble-neon","bubble-glass"); n.classList.add(`bubble-${state.prefs.bubble}`); }); }
+function openPanel(which){ closePanels(); if (which === "members") { membersPanel.classList.add("active"); membersPanel.setAttribute("aria-hidden","false"); overlay.classList.add("active"); } if (which === "shop") { shopPanel.classList.add("active"); shopPanel.setAttribute("aria-hidden","false"); overlay.classList.add("active"); } if (which === "emoji") { emojiPanel.classList.add("active"); emojiPanel.setAttribute("aria-hidden","false"); emojiOverlay.classList.add("active"); } }
+function closePanels(){ membersPanel.classList.remove("active"); shopPanel.classList.remove("active"); emojiPanel.classList.remove("active"); membersPanel.setAttribute("aria-hidden","true"); shopPanel.setAttribute("aria-hidden","true"); emojiPanel.setAttribute("aria-hidden","true"); overlay.classList.remove("active"); emojiOverlay.classList.remove("active"); }
+function renderMembers(arr){ membersList.innerHTML = ""; if (!arr.length) { membersList.innerHTML = '<div class="emptyState">No one active right now.</div>'; return; } arr.forEach(m => { const row = document.createElement("div"); row.className = "member"; row.innerHTML = `<div class="memberLeft"><div class="dot"></div><div class="memberName"></div></div><div class="badge">Active</div>`; row.querySelector(".memberName").innerHTML = renderName(m.id); membersList.appendChild(row); }); }
+function renderEmoji(){ emojiList.innerHTML = EMOJIS.map(e => `<div class="emojiItem"><div class="emojiLeft"><div class="emojiText">${e}</div><div><div class="shopTitle">${e}</div><div class="emojiMeta">Insert into your message</div></div></div><button class="useBtn" data-emoji="${e}">Use</button></div>`).join(""); emojiList.querySelectorAll("[data-emoji]").forEach(btn => btn.onclick = () => { msgInput.value += btn.dataset.emoji; msgInput.focus(); closePanels(); }); }
+function renderShop(){ shopCoinsInfo.textContent = `Coins: ${state.coins}. Coins follow your username across rooms.`; shopList.innerHTML = SHOP.map(item => { const owned = isUnlocked(item.id); const active = (item.id.startsWith("bubble-") && state.prefs.bubble === item.id.replace("bubble-","")) || (item.id.startsWith("theme-") && state.prefs.themeClass === item.id) || (item.id.startsWith("effect-") && state.prefs.effect === item.id.replace("effect-","")) || (item.id === "name-rainbow" && state.prefs.nameGlow === "rainbow") || (item.id === "name-gold" && state.prefs.nameGlow === "gold"); const txt = active ? "Equipped" : owned ? "Use" : `Buy ${item.price}`; return `<div class="shopItem"><div class="shopLeft"><div class="dot" style="background:${owned ? '#22c55e' : '#a78bfa'};box-shadow:${owned ? '0 0 0 4px rgba(34,197,94,.12)' : '0 0 0 4px rgba(167,139,250,.12)'}"></div><div style="min-width:0"><div class="shopTitle">${item.title}</div><div class="shopMeta">${item.desc}</div></div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="priceTag">🪙 ${item.price}</div><button class="buyBtn" data-shop="${item.id}">${txt}</button></div></div>`; }).join(""); shopList.querySelectorAll("[data-shop]").forEach(btn => btn.onclick = () => buyItem(SHOP.find(x => x.id === btn.dataset.shop))); }
+function activateItem(id){ if (id.startsWith("bubble-")) state.prefs.bubble = id.replace("bubble-",""); if (id.startsWith("theme-")) state.prefs.themeClass = id; if (id.startsWith("effect-")) state.prefs.effect = id.replace("effect-",""); if (id === "name-rainbow") state.prefs.nameGlow = "rainbow"; if (id === "name-gold") state.prefs.nameGlow = "gold"; savePrefs(); applyPrefs(); }
+function buyItem(item){ if (!item) return; const owned = isUnlocked(item.id); if (owned) { activateItem(item.id); saveHistory({ type:"use", item:item.id, room }); renderShop(); reapplyBubbleClasses(); return; } if (state.coins < item.price) { alert(`Need ${item.price} coins.`); return; } setCoins(state.coins - item.price); unlock(item.id); activateItem(item.id); saveHistory({ type:"buy", item:item.id, price:item.price, room }); renderShop(); reapplyBubbleClasses(); }
+function reapplyBubbleClasses(){ document.querySelectorAll(".msg").forEach(n => { n.classList.remove("bubble-soft","bubble-pill","bubble-neon","bubble-glass"); n.classList.add(`bubble-${state.prefs.bubble}`); }); }
+
 const overlay=document.getElementById("overlay");
 const emojiOverlay=document.getElementById("emojiOverlay");
-const membersPanel=document.getElementById("membersPanel");
-const shopPanel=document.getElementById("shopPanel");
-const emojiPanel=document.getElementById("emojiPanel");
-const themeBtn=document.getElementById("theme");
-const effectSel=document.getElementById("effect");
 
-const state={
-  coins:0,
-  prefs:{bubble:"soft",nameGlow:"none",themeClass:"",effect:"none"},
-  typingTimer:null,
-  selectedEmoji:""
-};
-
-const SHOP=[
-  {id:"bubble-soft",title:"Soft Bubbles",price:0,desc:"Cleaner rounded chat bubbles."},
-  {id:"bubble-pill",title:"Pill Bubbles",price:25,desc:"Big smooth bubble style."},
-  {id:"bubble-neon",title:"Neon Bubbles",price:45,desc:"A glowing chat look."},
-  {id:"bubble-glass",title:"Glass Bubbles",price:60,desc:"Soft transparent feel."},
-  {id:"theme-glow",title:"Glow Theme",price:40,desc:"Pink-violet send color."},
-  {id:"theme-fire",title:"Fire Theme",price:50,desc:"Warm fire-orange send color."},
-  {id:"theme-ocean",title:"Ocean Theme",price:50,desc:"Fresh cyan send color."},
-  {id:"theme-mint",title:"Mint Theme",price:50,desc:"Green fresh send color."},
-  {id:"theme-gold",title:"Gold Theme",price:65,desc:"Premium gold send color."},
-  {id:"name-rainbow",title:"Rainbow Name",price:35,desc:"Your name gets a rainbow glow."},
-  {id:"name-gold",title:"Gold Name",price:55,desc:"Premium gold name style."},
-  {id:"effect-rain",title:"Rain Effect",price:15,desc:"Unlock rainy background."},
-  {id:"effect-snow",title:"Snow Effect",price:15,desc:"Unlock snowy background."},
-  {id:"effect-thunder",title:"Thunder Effect",price:20,desc:"Unlock thunder flash background."}
-];
-const EMOJIS=["😂","🔥","❤️","👍","😭","😎","😳","💯","✨","🤝","💀","😍"];
-
-function grad(name){const g=[["#ff7eb3","#ff758c"],["#7afcff","#00c6ff"],["#fbc2eb","#a6c1ee"],["#fddb92","#d1fdff"],["#84fab0","#8fd3f4"]];return g[name.length%g.length];}
-function esc(v){return String(v ?? "");}
-function loadJSON(key, fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch{return fallback}}
-function saveJSON(key, value){localStorage.setItem(key, JSON.stringify(value));}
-function saveHistory(entry){const h=loadJSON(STORAGE.history,[]);h.unshift({time:Date.now(),...entry});saveJSON(STORAGE.history,h.slice(0,100));}
-function setCoins(v){state.coins=Math.max(0,Math.floor(Number(v)||0));coinsCount.textContent=String(state.coins);localStorage.setItem(STORAGE.coins,String(state.coins));}
-function addCoins(v,reason="activity"){if(!v)return;setCoins(state.coins+v);saveHistory({type:"coins",amount:v,reason,room});}
-function loadPrefs(){const p=loadJSON(STORAGE.prefs,null);if(p&&typeof p==="object")state.prefs={...state.prefs,...p};}
-function savePrefs(){saveJSON(STORAGE.prefs,state.prefs);}
-function loadUnlocks(){return loadJSON(STORAGE.unlocks,{"bubble-soft":true});}
-function saveUnlocks(u){saveJSON(STORAGE.unlocks,u);}
-function isUnlocked(id){return !!loadUnlocks()[id];}
-function unlock(id){const u=loadUnlocks();u[id]=true;saveUnlocks(u);}
-function renderName(name){const safe=esc(name||"Unknown");if(state.prefs.nameGlow==="rainbow")return `<span style="background:linear-gradient(90deg,#ff4d6d,#ffbd59,#7bffb2,#5ed3ff,#c77dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;if(state.prefs.nameGlow==="gold")return `<span style="background:linear-gradient(90deg,#fbbf24,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;const [c1,c2]=grad(name||"");return `<span style="background:linear-gradient(45deg,${c1},${c2});-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">${safe}</span>`;}
-function applyTheme(theme){document.body.classList.toggle("light",theme==="light");themeBtn.textContent=theme==="light"?"☀":"🌙";document.documentElement.style.colorScheme=theme;localStorage.setItem("theme",theme)}
-function getTheme(){const s=localStorage.getItem("theme");if(s==="light"||s==="dark")return s;return window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}
-function applyPrefs(){document.body.classList.remove("theme-glow","theme-fire","theme-ocean","theme-mint","theme-gold");if(state.prefs.themeClass)document.body.classList.add(state.prefs.themeClass);effectSel.value=state.prefs.effect||"none";mode=effectSel.value;document.querySelectorAll(".msg").forEach(n=>{n.classList.remove("bubble-soft","bubble-pill","bubble-neon","bubble-glass");n.classList.add(`bubble-${state.prefs.bubble}`);});}
-function openPanel(which){closePanels();if(which==="members"){membersPanel.classList.add("active");membersPanel.setAttribute("aria-hidden","false");}if(which==="shop"){shopPanel.classList.add("active");shopPanel.setAttribute("aria-hidden","false");}if(which==="emoji"){emojiPanel.classList.add("active");emojiPanel.setAttribute("aria-hidden","false");}overlay.classList.add("active");emojiOverlay.classList.add("active");}
-function closePanels(){membersPanel.classList.remove("active");shopPanel.classList.remove("active");emojiPanel.classList.remove("active");membersPanel.setAttribute("aria-hidden","true");shopPanel.setAttribute("aria-hidden","true");emojiPanel.setAttribute("aria-hidden","true");overlay.classList.remove("active");emojiOverlay.classList.remove("active");}
-function renderMembers(arr){membersList.innerHTML="";if(!arr.length){membersList.innerHTML='<div class="emptyState">No one active right now.</div>';return;}arr.forEach(m=>{const row=document.createElement("div");row.className="member";row.innerHTML=`<div class="memberLeft"><div class="dot"></div><div class="memberName"></div></div><div class="badge">Active</div>`;row.querySelector(".memberName").innerHTML=renderName(m.id);membersList.appendChild(row);});}
-function renderShop(){shopCoinsInfo.textContent=`Coins: ${state.coins}. Coins follow your username across rooms.`;shopList.innerHTML=SHOP.map(item=>{const owned=isUnlocked(item.id);const active=(item.id.startsWith("bubble-")&&state.prefs.bubble===item.id.replace("bubble-",""))||(item.id.startsWith("theme-")&&state.prefs.themeClass===item.id)||(item.id.startsWith("effect-")&&state.prefs.effect===item.id.replace("effect-",""))||(item.id==="name-rainbow"&&state.prefs.nameGlow==="rainbow")||(item.id==="name-gold"&&state.prefs.nameGlow==="gold");const txt=active?"Equipped":owned?"Use":`Buy ${item.price}`;return `<div class="shopItem"><div class="shopLeft"><div class="dot" style="background:${owned?'#22c55e':'#a78bfa'};box-shadow:${owned?'0 0 0 4px rgba(34,197,94,.12)':'0 0 0 4px rgba(167,139,250,.12)'}"></div><div style="min-width:0"><div class="shopTitle">${item.title}</div><div class="shopMeta">${item.desc}</div></div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0"><div class="priceTag">🪙 ${item.price}</div><button class="buyBtn" data-shop="${item.id}">${txt}</button></div></div>`;}).join("");shopList.querySelectorAll("[data-shop]").forEach(btn=>btn.onclick=()=>buyItem(SHOP.find(x=>x.id===btn.dataset.shop)));}
-function renderEmoji(){emojiList.innerHTML=EMOJIS.map(e=>`<div class="emojiItem"><div class="emojiLeft"><div class="emojiText">${e}</div><div><div class="shopTitle">${e}</div><div class="emojiMeta">Insert into your message</div></div></div><button class="useBtn" data-emoji="${e}">Use</button></div>`).join("");emojiList.querySelectorAll("[data-emoji]").forEach(btn=>btn.onclick=()=>{msgInput.value+=btn.dataset.emoji;msgInput.focus();closePanels();});}
-function activateItem(id){if(id.startsWith("bubble-"))state.prefs.bubble=id.replace("bubble-","");if(id.startsWith("theme-"))state.prefs.themeClass=id;if(id.startsWith("effect-"))state.prefs.effect=id.replace("effect-","");if(id==="name-rainbow")state.prefs.nameGlow="rainbow";if(id==="name-gold")state.prefs.nameGlow="gold";savePrefs();applyPrefs();}
-function buyItem(item){if(!item)return;const owned=isUnlocked(item.id);if(owned){activateItem(item.id);saveHistory({type:"use",item:item.id,room});renderShop();renderMessagesFromDom();return;}if(state.coins<item.price){alert(`Need ${item.price} coins.`);return;}setCoins(state.coins-item.price);unlock(item.id);activateItem(item.id);saveHistory({type:"buy",item:item.id,price:item.price,room});renderShop();renderMessagesFromDom();}
-function renderMessagesFromDom(){document.querySelectorAll(".msg").forEach(n=>{n.classList.remove("bubble-soft","bubble-pill","bubble-neon","bubble-glass");n.classList.add(`bubble-${state.prefs.bubble}`);});}
-
-// controls
-const membersBtn=document.getElementById("membersBtn");
-const shopBtn=document.getElementById("shopBtn");
-const emojiBtn=document.getElementById("emojiBtn");
-const closeMembers=document.getElementById("closeMembers");
-const closeShop=document.getElementById("closeShop");
-const closeEmoji=document.getElementById("closeEmoji");
-const copyBtn=document.getElementById("copyLink");
-const sendBtn=document.getElementById("sendBtn");
-const effect=document.getElementById("effect");
-
-membersBtn.onclick=()=>openPanel("members");
-shopBtn.onclick=()=>{renderShop();openPanel("shop");};
-emojiBtn.onclick=()=>{renderEmoji();openPanel("emoji");};
-closeMembers.onclick=closePanels;closeShop.onclick=closePanels;closeEmoji.onclick=closePanels;overlay.onclick=closePanels;emojiOverlay.onclick=closePanels;
-copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);const prev=copyBtn.textContent;copyBtn.textContent="✓";setTimeout(()=>copyBtn.textContent=prev,900)}catch{alert("Copy failed");}};
-themeBtn.onclick=()=>applyTheme(document.body.classList.contains("light")?"dark":"light");
+membersBtn.onclick = () => openPanel("members");
+shopBtn.onclick = () => { renderShop(); openPanel("shop"); };
+emojiBtn.onclick = () => { renderEmoji(); openPanel("emoji"); };
+closeMembers.onclick = closePanels;
+closeShop.onclick = closePanels;
+closeEmoji.onclick = closePanels;
+overlay.onclick = closePanels;
+emojiOverlay.onclick = closePanels;
+copyBtn.onclick = async () => { try { await navigator.clipboard.writeText(location.href); const prev = copyBtn.textContent; copyBtn.textContent = "✓"; setTimeout(() => copyBtn.textContent = prev, 900); } catch { alert("Copy failed"); } };
+themeBtn.onclick = () => applyTheme(document.body.classList.contains("light") ? "dark" : "light");
 applyTheme(getTheme());
 
-// initial user data
 loadPrefs();
-setCoins(Number(localStorage.getItem(STORAGE.coins)||0));
+setCoins(Number(localStorage.getItem(STORAGE.coins) || 0));
 applyPrefs();
 renderShop();
 renderEmoji();
 
-// presence / typing
-const presRef=doc(db,"rooms",room,"presence",user);
-const typingRef=doc(db,"rooms",room,"typing",user);
-let hbTimer=null;
-let typingTimer=null;
+const presRef = doc(db, "rooms", room, "presence", user);
+const typingRef = doc(db, "rooms", room, "typing", user);
+let hbTimer = null;
+let typingTimer = null;
 
-async function beat(){await setDoc(presRef,{user,lastSeen:Date.now(),room,active:true},{merge:true});}
+async function beat(){ await setDoc(presRef, { user, lastSeen: Date.now(), room, active: true }, { merge: true }); }
 await beat();
-hbTimer=setInterval(()=>beat().catch(()=>{}),3000);
-window.addEventListener("beforeunload",()=>{clearInterval(hbTimer);deleteDoc(presRef).catch(()=>{});deleteDoc(typingRef).catch(()=>{});});
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")deleteDoc(typingRef).catch(()=>{});else beat().catch(()=>{});});
+hbTimer = setInterval(() => beat().catch(() => {}), 3000);
+window.addEventListener("beforeunload", () => { clearInterval(hbTimer); deleteDoc(presRef).catch(() => {}); deleteDoc(typingRef).catch(() => {}); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") deleteDoc(typingRef).catch(() => {}); else beat().catch(() => {}); });
 
-async function setTyping(on){if(on){await setDoc(typingRef,{user,room,typing:true,lastSeen:Date.now()},{merge:true});}else{await deleteDoc(typingRef).catch(()=>{});}}
-msgInput.addEventListener("input",()=>{const v=msgInput.value.trim();clearTimeout(typingTimer);if(!v){setTyping(false).catch(()=>{});return;}setTyping(true).catch(()=>{});typingTimer=setTimeout(()=>setTyping(false).catch(()=>{}),1500);});
+async function setTyping(on){ if (on) await setDoc(typingRef, { user, room, typing: true, lastSeen: Date.now() }, { merge: true }); else await deleteDoc(typingRef).catch(() => {}); }
+msgInput.addEventListener("input", () => { const v = msgInput.value.trim(); clearTimeout(typingTimer); if (!v) { setTyping(false).catch(() => {}); return; } setTyping(true).catch(() => {}); typingTimer = setTimeout(() => setTyping(false).catch(() => {}), 1500); });
 
-onSnapshot(collection(db,"rooms",room,"presence"),snap=>{const now=Date.now();const active=[];snap.forEach(d=>{const data=d.data()||{};if(now-Number(data.lastSeen||0)<7000)active.push({id:d.id,lastSeen:Number(data.lastSeen||0)});});active.sort((a,b)=>b.lastSeen-a.lastSeen);info.textContent=`${room} • ${active.length} online`;renderMembers(active);membersSub.textContent=`${active.length} people active in this room right now.`;});
+onSnapshot(collection(db, "rooms", room, "presence"), snap => {
+  const now = Date.now();
+  const active = [];
+  snap.forEach(d => { const data = d.data() || {}; const lastSeen = Number(data.lastSeen || 0); if (now - lastSeen < 7000) active.push({ id:d.id, lastSeen }); });
+  active.sort((a,b) => b.lastSeen - a.lastSeen);
+  info.textContent = `${room} • ${active.length} online`;
+  renderMembers(active);
+  membersSub.textContent = `${active.length} people active in this room right now.`;
+});
 
-onSnapshot(collection(db,"rooms",room,"typing"),snap=>{const now=Date.now();const others=[];snap.forEach(d=>{if(d.id===user)return;const data=d.data()||{};if(now-Number(data.lastSeen||0)<2500)others.push(d.id);});if(!others.length)typingUI.textContent="";else if(others.length===1)typingUI.textContent=`${others[0]} is typing...`;else typingUI.textContent=`${others.length} people are typing...`;});
+onSnapshot(collection(db, "rooms", room, "typing"), snap => {
+  const now = Date.now();
+  const others = [];
+  snap.forEach(d => { if (d.id === user) return; const data = d.data() || {}; if (now - Number(data.lastSeen || 0) < 2500) others.push(d.id); });
+  if (!others.length) typingUI.textContent = "";
+  else if (others.length === 1) typingUI.textContent = `${others[0]} is typing...`;
+  else typingUI.textContent = `${others.length} people are typing...`;
+});
 
-// messages
-const messagesRef=collection(db,"rooms",room,"messages");
-function emojiBoost(text){return EMOJIS.some(e=>text.includes(e)) ? 1 : 0;}
-async function send(){const text=msgInput.value.trim();if(!text)return;await addDoc(messagesRef,{user,text,time:Date.now(),seenBy:[user],reactions:{"👍":[],"❤️":[],"🔥":[]}});addCoins(2+emojiBoost(text),"message");msgInput.value="";setTyping(false).catch(()=>{});msgInput.focus();}
-sendBtn.onclick=send;msgInput.addEventListener("keydown",e=>{if(e.key==="Enter")send();});
+const messagesRef = collection(db, "rooms", room, "messages");
+const EMOJI_SET = new Set(EMOJIS);
+function emojiBoost(text){ for (const e of EMOJI_SET) if (text.includes(e)) return 1; return 0; }
+async function awardDailyBonus(){ const todayKey = `${STORAGE.daily}-${new Date().toDateString()}`; if (!localStorage.getItem(todayKey)) { setCoins(state.coins + 5); saveHistory({ type:"daily_bonus", amount:5, room }); localStorage.setItem(todayKey, "1"); } }
+await awardDailyBonus();
 
-function toggleReaction(messageId,data,emoji){const r=data.reactions||{};const arr=Array.isArray(r[emoji])?r[emoji]:[];const next=arr.includes(user)?arr.filter(x=>x!==user):[...arr,user];updateDoc(doc(db,"rooms",room,"messages",messageId),{[`reactions.${emoji}`]:next});addCoins(1,"reaction");}
-function renderMessage(docSnap){const m=docSnap.data();const div=document.createElement("div");div.className=`msg ${m.user===user?"me":"other"}`;div.classList.add(`bubble-${state.prefs.bubble}`);const name=document.createElement("div");name.className="name";name.innerHTML=renderName(m.user||"Unknown");const bubble=document.createElement("div");bubble.className="bubble";const text=document.createElement("div");text.className="text";text.textContent=esc(m.text);const meta=document.createElement("div");meta.className="meta";meta.textContent=new Date(m.time||Date.now()).toLocaleTimeString();const reactions=document.createElement("div");reactions.className="reactions";["👍","❤️","🔥"].forEach(emoji=>{const users=Array.isArray(m.reactions?.[emoji])?m.reactions[emoji]:[];const btn=document.createElement("span");btn.className="reactBtn"+(users.includes(user)?" active":"");btn.textContent=`${emoji}${users.length?` ${users.length}`:""}`;btn.onclick=()=>toggleReaction(docSnap.id,m,emoji);reactions.appendChild(btn);});bubble.appendChild(text);bubble.appendChild(meta);bubble.appendChild(reactions);if(m.user===user){const del=document.createElement("button");del.className="deleteBtn";del.textContent="🗑";del.title="Delete message";del.onclick=()=>deleteDoc(doc(db,"rooms",room,"messages",docSnap.id));div.appendChild(del);}div.appendChild(name);div.appendChild(bubble);return div;}
-function reapplyBubbleClasses(){document.querySelectorAll(".msg").forEach(node=>{node.classList.remove("bubble-soft","bubble-pill","bubble-neon","bubble-glass");node.classList.add(`bubble-${state.prefs.bubble}`);});}
-onSnapshot(query(messagesRef,orderBy("time")),snap=>{const isAtBottom=chat.scrollHeight-chat.scrollTop-chat.clientHeight<90;chat.innerHTML="";snap.forEach(docSnap=>chat.appendChild(renderMessage(docSnap)));reapplyBubbleClasses();if(isAtBottom)chat.scrollTop=chat.scrollHeight;});
+async function send(){
+  const text = msgInput.value.trim();
+  if (!text) return;
+  await addDoc(messagesRef, { user, text, time: Date.now(), seenBy: [user], reactions: { "👍": [], "❤️": [], "🔥": [] } });
+  addCoins(2 + emojiBoost(text), "message");
+  msgInput.value = "";
+  setTyping(false).catch(() => {});
+  msgInput.focus();
+}
+sendBtn.onclick = send;
+msgInput.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
 
-// shop/effects save
-function saveCurrentEffect(){state.prefs.effect=effectSel.value;savePrefs();}
-effectSel.onchange=e=>{mode=e.target.value;saveCurrentEffect();};
+function toggleReaction(messageId, data, emoji){ const r = data.reactions || {}; const arr = Array.isArray(r[emoji]) ? r[emoji] : []; const next = arr.includes(user) ? arr.filter(x => x !== user) : [...arr, user]; updateDoc(doc(db, "rooms", room, "messages", messageId), { [`reactions.${emoji}`]: next }); addCoins(1, "reaction"); }
+function renderMessage(docSnap){
+  const m = docSnap.data();
+  const div = document.createElement("div");
+  div.className = `msg ${m.user === user ? "me" : "other"}`;
+  div.classList.add(`bubble-${state.prefs.bubble}`);
 
-// daily bonus + load
-const todayKey=`${STORAGE.daily}-${new Date().toDateString()}`;
-if(!localStorage.getItem(todayKey)){setCoins(state.coins+5);saveHistory({type:"daily_bonus",amount:5,room});localStorage.setItem(todayKey,"1");}
+  const name = document.createElement("div");
+  name.className = "name";
+  name.innerHTML = renderName(m.user || "Unknown");
 
-// background effects
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-let mode=effectSel.value||"none";
-function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
-resize();window.addEventListener("resize",resize);
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const isLight=document.body.classList.contains("light");if(mode==="snow"){for(let i=0;i<40;i++){ctx.fillStyle=isLight?"rgba(17,24,39,.18)":"rgba(255,255,255,.28)";ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);}}if(mode==="rain"){for(let i=0;i<60;i++){ctx.fillStyle=isLight?"rgba(17,24,39,.2)":"rgba(255,255,255,.22)";ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);}}if(mode==="thunder"&&Math.random()<0.02){ctx.fillStyle="rgba(255,255,255,.15)";ctx.fillRect(0,0,canvas.width,canvas.height);}requestAnimationFrame(draw)}
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  const text = document.createElement("div");
+  text.className = "text";
+  text.textContent = esc(m.text);
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = new Date(m.time || Date.now()).toLocaleTimeString();
+  const reactions = document.createElement("div");
+  reactions.className = "reactions";
+  ["👍","❤️","🔥"].forEach(emoji => {
+    const users = Array.isArray(m.reactions?.[emoji]) ? m.reactions[emoji] : [];
+    const btn = document.createElement("span");
+    btn.className = "reactBtn" + (users.includes(user) ? " active" : "");
+    btn.textContent = `${emoji}${users.length ? ` ${users.length}` : ""}`;
+    btn.onclick = () => toggleReaction(docSnap.id, m, emoji);
+    reactions.appendChild(btn);
+  });
+  bubble.appendChild(text);
+  bubble.appendChild(meta);
+  bubble.appendChild(reactions);
+
+  if (m.user === user) {
+    const del = document.createElement("button");
+    del.className = "deleteBtn";
+    del.textContent = "🗑";
+    del.title = "Delete message";
+    del.onclick = () => deleteDoc(doc(db, "rooms", room, "messages", docSnap.id));
+    div.appendChild(del);
+  }
+
+  div.appendChild(name);
+  div.appendChild(bubble);
+  return div;
+}
+
+onSnapshot(query(messagesRef, orderBy("time")), snap => {
+  const isAtBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
+  chat.innerHTML = "";
+  snap.forEach(docSnap => chat.appendChild(renderMessage(docSnap)));
+  reapplyBubbleClasses();
+  if (isAtBottom) chat.scrollTop = chat.scrollHeight;
+});
+
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+let mode = effectSel.value || "none";
+effectSel.onchange = e => { mode = e.target.value; state.prefs.effect = mode; savePrefs(); };
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); window.addEventListener("resize", resize);
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const isLight = document.body.classList.contains("light");
+  if (mode === "snow") for (let i=0;i<40;i++) { ctx.fillStyle = isLight ? "rgba(17,24,39,.18)" : "rgba(255,255,255,.28)"; ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2); }
+  if (mode === "rain") for (let i=0;i<60;i++) { ctx.fillStyle = isLight ? "rgba(17,24,39,.2)" : "rgba(255,255,255,.22)"; ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 10); }
+  if (mode === "thunder" && Math.random() < 0.02) { ctx.fillStyle = "rgba(255,255,255,.15)"; ctx.fillRect(0,0,canvas.width,canvas.height); }
+  requestAnimationFrame(draw);
+}
 draw();
 
-// init UI states
-refreshPanels();
-function refreshPanels(){overlay.classList.remove("active");emojiOverlay.classList.remove("active");membersPanel.classList.remove("active");shopPanel.classList.remove("active");emojiPanel.classList.remove("active");}
-
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanels();});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePanels(); });
 </script>
 </body>
 </html>
