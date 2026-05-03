@@ -3,61 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Temp Chat</title>
+<title>Vibely Chat</title>
 
 <style>
-:root{--bg:#0f172a;--text:#e5e7eb;--box:#1e293b;--me:#6366f1}
-body.light{--bg:#f3f4f6;--text:#111;--box:#fff}
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh}
-canvas{position:fixed;inset:0;z-index:-1;pointer-events:none}
+:root{
+  --bg:#0f172a;
+  --text:#e5e7eb;
+  --box:#1e293b;
+  --me:#6366f1;
+}
+body.light{
+  --bg:#f3f4f6;
+  --text:#111;
+  --box:#ffffff;
+}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
 
-.header{display:flex;justify-content:space-between;padding:10px;background:var(--box);align-items:center;position:relative;z-index:5}
+/* canvas */
+canvas{
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:-1;
+  pointer-events:none;
+}
+
+/* header */
+.header{
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  background:var(--box);
+  align-items:center;
+}
+
 #info{font-size:12px;opacity:.7}
 
-#chat{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
-.msg{max-width:75%;position:relative}
+/* typing indicator */
+#typing{
+  font-size:12px;
+  padding:4px 10px;
+  opacity:.8;
+  height:18px;
+}
+
+/* chat */
+#chat{
+  flex:1;
+  overflow-y:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.msg{
+  max-width:75%;
+}
 .me{align-self:flex-end;text-align:right}
 .other{align-self:flex-start}
-.name{font-size:11px;font-weight:bold}
-.bubble{padding:10px;border-radius:14px;background:var(--box);word-break:break-word}
-.me .bubble{background:var(--me);color:#fff}
-.meta{font-size:10px;opacity:.6;margin-top:4px}
 
-/* hover delete */
-.deleteBtn{position:absolute;top:0;right:-18px;opacity:0;transition:.2s;cursor:pointer;font-size:12px}
-.msg:hover .deleteBtn{opacity:1}
+/* bubble */
+.bubble{
+  padding:10px;
+  border-radius:14px;
+  background:var(--box);
+  word-break:break-word;
+}
+.me .bubble{
+  background:var(--me);
+  color:#fff;
+}
 
-/* reactions */
-.reactions{display:flex;gap:6px;margin-top:4px;font-size:12px}
-.reactBtn{cursor:pointer;opacity:.7}
-.reactBtn:hover{opacity:1}
+/* meta */
+.meta{
+  font-size:10px;
+  opacity:.6;
+  margin-top:4px;
+}
 
-.inputBox{display:flex;padding:8px;gap:6px;background:var(--box)}
-input{flex:1;padding:12px;border-radius:20px;border:none;outline:none}
-button{padding:10px 14px;border:none;border-radius:20px;cursor:pointer}
-
-/* MEMBERS PANEL (fixed overlay, not cutting chat) */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.25s;z-index:8}
-#overlay.active{opacity:1;pointer-events:auto}
-
-#membersPanel{position:fixed;top:0;right:0;height:100%;width:280px;max-width:85vw;background:var(--box);transform:translateX(100%);transition:.25s;z-index:9;display:flex;flex-direction:column}
-#membersPanel.active{transform:translateX(0)}
-
-.membersHeader{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #0003}
-#membersList{flex:1;overflow:auto;padding:10px}
-.member{padding:10px;border-radius:10px;margin-bottom:8px;background:#0002}
-
+/* input */
+.inputBox{
+  display:flex;
+  padding:8px;
+  gap:6px;
+  background:var(--box);
+}
+input{
+  flex:1;
+  padding:12px;
+  border-radius:20px;
+  border:none;
+  outline:none;
+}
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+}
 </style>
 </head>
+
 <body>
 
 <canvas id="bg"></canvas>
 
 <div class="header">
-  <div id="info"></div>
   <div>
-    <button id="copyLink">🔗</button>
-    <button id="membersBtn">👥</button>
+    <div id="info"></div>
+    <div id="typing"></div>
+  </div>
+
+  <div>
     <select id="effect">
       <option value="none">None</option>
       <option value="snow">Snow</option>
@@ -75,145 +141,178 @@ button{padding:10px 14px;border:none;border-radius:20px;cursor:pointer}
   <button id="sendBtn">Send</button>
 </div>
 
-<div id="overlay"></div>
-<div id="membersPanel">
-  <div class="membersHeader">
-    <strong>Members</strong>
-    <button id="closeMembers">✖</button>
-  </div>
-  <div id="membersList"></div>
-</div>
-
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {getFirestore,collection,addDoc,query,orderBy,onSnapshot,doc,setDoc,updateDoc,deleteDoc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+getFirestore,collection,addDoc,query,orderBy,onSnapshot,
+doc,setDoc,updateDoc,deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const app=initializeApp({apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",authDomain:"temp-chat-6f08b.firebaseapp.com",projectId:"temp-chat-6f08b"});
+const firebaseConfig={
+  apiKey:"AIzaSyB0azRFE5jqdqnWgXBcU9qc3cWbqDkyk1w",
+  authDomain:"temp-chat-6f08b.firebaseapp.com",
+  projectId:"temp-chat-6f08b"
+};
+
+const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
+/* params */
 const p=new URLSearchParams(location.search);
 const user=p.get("user");
 const room=p.get("room");
 
+/* UI */
 const chat=document.getElementById("chat");
 const msgInput=document.getElementById("msg");
 const info=document.getElementById("info");
+const typingUI=document.getElementById("typing");
 
-// members UI
-const panel=document.getElementById("membersPanel");
-const overlay=document.getElementById("overlay");
-document.getElementById("membersBtn").onclick=()=>{panel.classList.add("active");overlay.classList.add("active")};
-document.getElementById("closeMembers").onclick=closePanel;
-overlay.onclick=closePanel;
-function closePanel(){panel.classList.remove("active");overlay.classList.remove("active")}
-
-// copy link
-document.getElementById("copyLink").onclick=()=>{navigator.clipboard.writeText(location.href)};
-
-function grad(n){const g=[["#ff7eb3","#ff758c"],["#7afcff","#00c6ff"],["#fbc2eb","#a6c1ee"],["#fddb92","#d1fdff"],["#84fab0","#8fd3f4"]];return g[n.length%g.length]}
-
-// presence
+/* presence */
 const presRef=doc(db,"rooms",room,"presence",user);
 await setDoc(presRef,{online:true});
 window.addEventListener("beforeunload",()=>deleteDoc(presRef));
 
+/* typing system */
+const typingRef=doc(db,"rooms",room,"typing",user);
+
+let typingTimeout;
+
+msgInput.addEventListener("input", async () => {
+  await setDoc(typingRef,{
+    typing:true,
+    time:Date.now()
+  });
+
+  clearTimeout(typingTimeout);
+
+  typingTimeout=setTimeout(async ()=>{
+    await deleteDoc(typingRef);
+  },1500);
+});
+
+/* show typing users */
+onSnapshot(collection(db,"rooms",room,"typing"),snap=>{
+  let usersTyping=[];
+
+  snap.forEach(d=>{
+    if(d.id !== user){
+      usersTyping.push(d.id);
+    }
+  });
+
+  if(usersTyping.length===0){
+    typingUI.innerText="";
+  } else if(usersTyping.length===1){
+    typingUI.innerText=`${usersTyping[0]} is typing...`;
+  } else {
+    typingUI.innerText=`${usersTyping.length} people are typing...`;
+  }
+});
+
+/* online users */
 onSnapshot(collection(db,"rooms",room,"presence"),snap=>{
-  let users=[];membersList.innerHTML="";
-  snap.forEach(d=>{users.push(d.id);const el=document.createElement("div");el.className="member";el.innerText=d.id;membersList.appendChild(el)});
+  let users=[];
+  snap.forEach(d=>users.push(d.id));
   info.innerText=`${room} • ${users.length} online`;
 });
 
-// messages
+/* send message */
 const messagesRef=collection(db,"rooms",room,"messages");
 
-async function send(){const text=msgInput.value.trim();if(!text)return;await addDoc(messagesRef,{user,text,time:Date.now(),seenBy:[user],reactions:{}});msgInput.value=""}
+async function send(){
+  const text=msgInput.value.trim();
+  if(!text)return;
 
-document.getElementById("sendBtn").onclick=send;
-msgInput.addEventListener("keypress",e=>{if(e.key==="Enter")send()});
+  await addDoc(messagesRef,{
+    user,
+    text,
+    time:Date.now(),
+    seenBy:[user]
+  });
 
-function toggleReaction(id,data,emoji){
-  const r=data.reactions||{};
-  const arr=r[emoji]||[];
-  const updated=arr.includes(user)?arr.filter(u=>u!==user):[...arr,user];
-  updateDoc(doc(db,"rooms",room,"messages",id),{[`reactions.${emoji}`]:updated});
+  msgInput.value="";
+
+  // stop typing immediately after send
+  await deleteDoc(typingRef);
 }
 
+document.getElementById("sendBtn").onclick=send;
+
+msgInput.addEventListener("keypress",e=>{
+  if(e.key==="Enter")send();
+});
+
+/* messages */
 onSnapshot(query(messagesRef,orderBy("time")),snap=>{
   chat.innerHTML="";
 
   snap.forEach(docSnap=>{
     const m=docSnap.data();
+
     const div=document.createElement("div");
     div.className="msg "+(m.user===user?"me":"other");
 
-    const [c1,c2]=grad(m.user);
-
-    const name=document.createElement("div");
-    name.className="name";
-    name.style.background=`linear-gradient(45deg,${c1},${c2})`;
-    name.style.webkitBackgroundClip="text";
-    name.style.webkitTextFillColor="transparent";
-    name.innerText=m.user;
-
-    const bubble=document.createElement("div");
-    bubble.className="bubble";
-    bubble.textContent=m.text;
-
-    const time=document.createElement("div");
-    time.className="meta";
-    time.innerText=new Date(m.time).toLocaleTimeString();
-
-    // reactions UI
-    const reacts=document.createElement("div");
-    reacts.className="reactions";
-    ["👍","❤️","🔥"].forEach(e=>{
-      const btn=document.createElement("span");
-      const count=(m.reactions?.[e]||[]).length;
-      btn.innerText=e+(count?` ${count}`:"");
-      btn.className="reactBtn";
-      btn.onclick=()=>toggleReaction(docSnap.id,m,e);
-      reacts.appendChild(btn);
-    });
-
-    bubble.appendChild(time);
-    bubble.appendChild(reacts);
-
-    div.appendChild(name);
-    div.appendChild(bubble);
-
-    // delete own
-    if(m.user===user){
-      const del=document.createElement("div");
-      del.className="deleteBtn";
-      del.innerText="🗑";
-      del.onclick=()=>deleteDoc(doc(db,"rooms",room,"messages",docSnap.id));
-      div.appendChild(del);
-    }
+    div.innerHTML=`
+      <div class="bubble">
+        <b>${m.user}</b><br>
+        ${m.text}
+        <div class="meta">
+          ${new Date(m.time).toLocaleTimeString()}
+        </div>
+      </div>
+    `;
 
     chat.appendChild(div);
-
-    if(!m.seenBy?.includes(user)){
-      updateDoc(doc(db,"rooms",room,"messages",docSnap.id),{seenBy:[...(m.seenBy||[]),user]});
-    }
   });
 
   chat.scrollTop=chat.scrollHeight;
 });
 
-// theme
-document.getElementById("theme").onclick=()=>document.body.classList.toggle("light");
+/* theme */
+document.getElementById("theme").onclick=()=>{
+  document.body.classList.toggle("light");
+};
 
-// effects
+/* effects */
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
-function resize(){canvas.width=innerWidth;canvas.height=innerHeight}resize();window.onresize=resize;
+
+function resize(){
+  canvas.width=innerWidth;
+  canvas.height=innerHeight;
+}
+resize();
+window.onresize=resize;
+
 let mode="none";
-document.getElementById("effect").onchange=e=>mode=e.target.value;
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);
-if(mode==="snow")for(let i=0;i<40;i++)ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
-if(mode==="rain")for(let i=0;i<60;i++)ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
-if(mode==="thunder")if(Math.random()<0.02){ctx.fillStyle="white";ctx.fillRect(0,0,canvas.width,canvas.height)}
-requestAnimationFrame(draw)}draw();
+effect.onchange=e=>mode=e.target.value;
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(mode==="snow"){
+    for(let i=0;i<40;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,2,2);
+    }
+  }
+
+  if(mode==="rain"){
+    for(let i=0;i<60;i++){
+      ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height,1,10);
+    }
+  }
+
+  if(mode==="thunder"){
+    if(Math.random()<0.02){
+      ctx.fillStyle="white";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();
 
 </script>
 </body>
